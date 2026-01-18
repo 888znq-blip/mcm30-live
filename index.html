@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>MCM(30) BTC CLOUD</title>
+<title>MCM(30) DNA CORE CLOUD</title>
 <style>
 :root{--red:#ef4444;--green:#10b981;--blue:#3b82f6;--bg:#f5f5f5;--ui-bg:#fff;--grid:#d1d5db;--border:#9ca3af;--text:#1f2937;--text-muted:#6b7280;--shadow:rgba(0,0,0,.1)}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -43,7 +43,7 @@ canvas:active{cursor:grabbing}
 <body>
 <div id="ui">
 <div style="display:flex;gap:12px;align-items:center">
-<h1 style="font-size:13px;letter-spacing:1px">MCM(30) BTC CLOUD</h1>
+<h1 style="font-size:13px;letter-spacing:1px">MCM(30) DNA CLOUD</h1>
 <span id="status" class="status">OFFLINE</span>
 </div>
 <div style="display:flex;gap:8px">
@@ -94,7 +94,7 @@ const ctx=canvas.getContext('2d',{alpha:false,desynchronized:true});
 const statusEl=document.getElementById('status');
 const DERIV_WS="wss://ws.derivws.com/websockets/v3?app_id=1089";
 const TOKEN="TpVIBWpqet5X8AH";
-const SYMBOL="cryBTCUSD"; // BITCOIN
+const SYMBOL="cryBTCUSD";
 let ws=null,subscriptionId=null,lastPrice=null,currentColumn=0,ticksInCurrentMinute=0;
 let matrixData={};
 let cameraX=0,isFollowing=true,isDragging=false,lastMouseX=0;
@@ -111,7 +111,7 @@ const pad=(n,size=2)=>String(n).padStart(size,'0');
 
 let tickHistory=[];
 
-// --- NEW CLOUD LOADER ---
+// --- FIREBASE CLOUD LOADER (REPLACES LOCALSTORAGE) ---
 async function loadFirebaseData() {
     statusEl.innerText = "LOADING DB...";
     try {
@@ -120,22 +120,24 @@ async function loadFirebaseData() {
             const data = snapshot.val();
             if (data.prices && data.times) {
                 console.log(`[CLOUD] Loaded ${data.prices.length} ticks`);
-                // Clear existing data
-                tickHistory = [];
+                // Clear state for fresh load
                 matrixData = {};
                 currentColumn = 0;
                 ticksInCurrentMinute = 0;
+                tickHistory = [];
                 
-                // Replay history
+                // Replay history through the logic
                 for(let i = 0; i < data.prices.length; i++) {
                     const t = { 
                         quote: data.prices[i], 
                         epoch: data.times[i] 
                     };
-                    handleTick(t); 
+                    handleTick(t); // No 'silent' flag needed for this version, it's fast
                 }
                 statusEl.innerText = "DB SYNCED";
-                draw();
+                updateStreakPanel();
+                updateReversalPanel();
+                if(isFollowing) jumpToCurrent();
             }
         } else {
             statusEl.innerText = "DB EMPTY";
