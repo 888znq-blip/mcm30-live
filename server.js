@@ -4,6 +4,7 @@ import { getDatabase } from 'firebase-admin/database';
 import WebSocket from 'ws';
 
 // 1. SETUP FIREBASE
+// Ensure your Render Environment Variable 'FIREBASE_KEY' is set correctly
 const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
 initializeApp({
   credential: cert(serviceAccount),
@@ -33,7 +34,7 @@ app.listen(port, () => {
     console.log(`Server running on port ${port}`);
 });
 
-// 3. THE LOGIC (UPDATED FOR BTC)
+// 3. THE LOGIC (BTC SPECIFIC)
 function runDataCollection() {
     return new Promise((resolve, reject) => {
         const ws = new WebSocket(DERIV_WS);
@@ -44,9 +45,9 @@ function runDataCollection() {
         }, 20000);
 
         ws.on('open', () => {
-            console.log("Connected to Deriv. Fetching BTCUSD...");
+            console.log("Connected. Fetching BTCUSD...");
             ws.send(JSON.stringify({
-                ticks_history: "cryBTCUSD", // <--- CHANGED TO BTC
+                ticks_history: "cryBTCUSD",  // <--- FETCHING BITCOIN
                 adjust_start_time: 1,
                 count: 1000,
                 end: "latest",
