@@ -4,7 +4,7 @@ import { getDatabase } from 'firebase-admin/database';
 import WebSocket from 'ws';
 
 // 1. SETUP FIREBASE
-// Ensure your Render Environment Variable 'FIREBASE_KEY' is set correctly
+// Ensure your Render Environment Variable 'FIREBASE_KEY' is set
 const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
 initializeApp({
   credential: cert(serviceAccount),
