@@ -1,61 +1,82 @@
+import express from 'express';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getDatabase } from 'firebase-admin/database';
 import WebSocket from 'ws';
 
 // 1. SETUP FIREBASE
-// We use the environment variable 'FIREBASE_KEY' which you will set in Render
-// This keeps your private key safe.
 const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
-
 initializeApp({
   credential: cert(serviceAccount),
-  // I have added your specific Database URL here:
   databaseURL: "https://mcm30-db-fe9da-default-rtdb.asia-southeast1.firebasedatabase.app"
 });
-
 const db = getDatabase();
 const DERIV_WS = "wss://ws.derivws.com/websockets/v3?app_id=1089";
 
-async function runJob() {
-    console.log("Starting Cron Job...");
-    const ws = new WebSocket(DERIV_WS);
+// 2. SETUP SERVER
+const app = express();
+const port = process.env.PORT || 3000;
 
-    ws.on('open', () => {
-        console.log("Connected to Deriv. Fetching history...");
-        ws.send(JSON.stringify({
-            ticks_history: "frxEURUSD",
-            adjust_start_time: 1,
-            count: 1000,
-            end: "latest",
-            style: "ticks"
-        }));
+// This is the "Trigger" URL
+app.get('/update', async (req, res) => {
+    console.log("External trigger received. Starting job...");
+    
+    try {
+        await runDataCollection();
+        res.status(200).send('Data updated successfully');
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error updating data');
+    }
+});
+
+// Default page (just to check if it's alive)
+app.get('/', (req, res) => res.send('MCM Bot is Sleeping. Hit /update to wake me.'));
+
+// Start Listening
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+});
+
+// 3. THE LOGIC (Same as before, wrapped in a function)
+function runDataCollection() {
+    return new Promise((resolve, reject) => {
+        const ws = new WebSocket(DERIV_WS);
+        
+        // Timeout safety: Fail if it takes longer than 20s
+        const safetyTimeout = setTimeout(() => {
+            ws.terminate();
+            reject(new Error("WebSocket timeout"));
+        }, 20000);
+
+        ws.on('open', () => {
+            ws.send(JSON.stringify({
+                ticks_history: "frxEURUSD",
+                adjust_start_time: 1,
+                count: 1000,
+                end: "latest",
+                style: "ticks"
+            }));
+        });
+
+        ws.on('message', async (data) => {
+            const msg = JSON.parse(data);
+            if (msg.history) {
+                clearTimeout(safetyTimeout);
+                const historyRef = db.ref('tick_history');
+                await historyRef.set({
+                    prices: msg.history.prices,
+                    times: msg.history.times,
+                    lastUpdate: Date.now()
+                });
+                console.log("Database updated.");
+                ws.close();
+                resolve();
+            }
+        });
+        
+        ws.on('error', (e) => {
+            clearTimeout(safetyTimeout);
+            reject(e);
+        });
     });
-
-    ws.on('message', async (data) => {
-        const msg = JSON.parse(data);
-        if (msg.history) {
-            console.log(`Fetched ${msg.history.prices.length} ticks.`);
-
-            const historyRef = db.ref('tick_history');
-            
-            // Overwrite the cloud history with the latest 1000 ticks
-            await historyRef.set({
-                prices: msg.history.prices,
-                times: msg.history.times,
-                lastUpdate: Date.now()
-            });
-
-            console.log("Database Updated Successfully.");
-            ws.close();
-            process.exit(0);
-        }
-    });
-
-    // Failsafe: Stop if it hangs for more than 30 seconds
-    setTimeout(() => {
-        console.error("Timeout: Job took too long.");
-        process.exit(1);
-    }, 30000);
 }
-
-runJob();
