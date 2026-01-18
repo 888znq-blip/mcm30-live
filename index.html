@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>MCM(30) DNA CORE CLOUD</title>
+<title>MCM(30) EURUSD CORE</title>
 <style>
 :root{--red:#ef4444;--green:#10b981;--blue:#3b82f6;--bg:#f5f5f5;--ui-bg:#fff;--grid:#d1d5db;--border:#9ca3af;--text:#1f2937;--text-muted:#6b7280;--shadow:rgba(0,0,0,.1)}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -43,7 +43,7 @@ canvas:active{cursor:grabbing}
 <body>
 <div id="ui">
 <div style="display:flex;gap:12px;align-items:center">
-<h1 style="font-size:13px;letter-spacing:1px">MCM(30) DNA CLOUD</h1>
+<h1 style="font-size:13px;letter-spacing:1px">MCM(30) EURUSD CORE</h1>
 <span id="status" class="status">OFFLINE</span>
 </div>
 <div style="display:flex;gap:8px">
@@ -72,7 +72,6 @@ canvas:active{cursor:grabbing}
 </div>
 
 <script type="module">
-// FIREBASE IMPORT
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
@@ -94,7 +93,7 @@ const ctx=canvas.getContext('2d',{alpha:false,desynchronized:true});
 const statusEl=document.getElementById('status');
 const DERIV_WS="wss://ws.derivws.com/websockets/v3?app_id=1089";
 const TOKEN="TpVIBWpqet5X8AH";
-const SYMBOL="cryBTCUSD";
+const SYMBOL="frxEURUSD"; // UPDATED TO EURUSD
 let ws=null,subscriptionId=null,lastPrice=null,currentColumn=0,ticksInCurrentMinute=0;
 let matrixData={};
 let cameraX=0,isFollowing=true,isDragging=false,lastMouseX=0;
@@ -111,7 +110,6 @@ const pad=(n,size=2)=>String(n).padStart(size,'0');
 
 let tickHistory=[];
 
-// --- FIREBASE CLOUD LOADER (REPLACES LOCALSTORAGE) ---
 async function loadFirebaseData() {
     statusEl.innerText = "LOADING DB...";
     try {
@@ -119,31 +117,20 @@ async function loadFirebaseData() {
         if (snapshot.exists()) {
             const data = snapshot.val();
             if (data.prices && data.times) {
-                console.log(`[CLOUD] Loaded ${data.prices.length} ticks`);
-                // Clear state for fresh load
                 matrixData = {};
                 currentColumn = 0;
                 ticksInCurrentMinute = 0;
                 tickHistory = [];
-                
-                // Replay history through the logic
                 for(let i = 0; i < data.prices.length; i++) {
-                    const t = { 
-                        quote: data.prices[i], 
-                        epoch: data.times[i] 
-                    };
-                    handleTick(t); // No 'silent' flag needed for this version, it's fast
+                    handleTick({ quote: data.prices[i], epoch: data.times[i] });
                 }
                 statusEl.innerText = "DB SYNCED";
                 updateStreakPanel();
                 updateReversalPanel();
                 if(isFollowing) jumpToCurrent();
             }
-        } else {
-            statusEl.innerText = "DB EMPTY";
         }
     } catch (e) {
-        console.error("Firebase Error:", e);
         statusEl.innerText = "DB ERROR";
     }
 }
@@ -151,93 +138,53 @@ async function loadFirebaseData() {
 function connectDerivWS(){
 ws=new WebSocket(DERIV_WS);
 ws.onopen=()=>{
-console.log('Connected to Deriv WebSocket');
 ws.send(JSON.stringify({authorize:TOKEN}));
 };
 ws.onmessage=(msg)=>{
 const data=JSON.parse(msg.data);
 if(data.authorize){
-console.log('Authorized successfully');
 statusEl.innerText="LIVE";
-statusEl.classList.add('live');
 ws.send(JSON.stringify({ticks:SYMBOL,subscribe:1}));
 }
-if(data.tick){
-handleTick(data.tick);
-}
-if(data.subscription){
-subscriptionId=data.subscription.id;
-console.log('Subscribed to',SYMBOL);
-}
+if(data.tick) handleTick(data.tick);
 };
-ws.onerror=(error)=>{
-console.error('WebSocket error:',error);
-statusEl.innerText="ERROR";
-statusEl.classList.remove('live');
-};
-ws.onclose=()=>{
-console.log('WebSocket closed, reconnecting...');
-statusEl.innerText="RECONNECTING";
-statusEl.classList.remove('live');
-setTimeout(connectDerivWS,3000);
-};
+ws.onclose=()=>setTimeout(connectDerivWS,3000);
 }
 
 function handleTick(tick){
 const price=tick.quote;
 const timestamp=tick.epoch*1000;
 tickHistory.push({price,timestamp});
-if(!matrixData[currentColumn]){
-matrixData[currentColumn]={};
-}
+if(!matrixData[currentColumn]) matrixData[currentColumn]={};
 const row=Math.min(ticksInCurrentMinute,TOTAL_ROWS-1);
 let color=null;
 if(tickHistory.length>=MCM_LOOKBACK+1){
 const priceNTicksAgo=tickHistory[tickHistory.length-(MCM_LOOKBACK+1)].price;
-if(price>priceNTicksAgo){
-color='G';
-}else if(price<priceNTicksAgo){
-color='R';
-}else{
+if(price>priceNTicksAgo) color='G';
+else if(price<priceNTicksAgo) color='R';
+else {
 for(let i=tickHistory.length-2;i>=Math.max(0,tickHistory.length-(MCM_LOOKBACK+1));i--){
 if(i>=MCM_LOOKBACK){
 const oldPrice=tickHistory[i-MCM_LOOKBACK].price;
 const currentPrice=tickHistory[i].price;
-if(currentPrice>oldPrice){
-color='G';
-break;
-}else if(currentPrice<oldPrice){
-color='R';
-break;
-}
-}
-}
+if(currentPrice>oldPrice){color='G';break;}
+else if(currentPrice<oldPrice){color='R';break;}
+}}}
 if(!color)color='G';
-}
 }else{
 if(tickHistory.length>=2){
 const prevPrice=tickHistory[tickHistory.length-2].price;
 color=price>prevPrice?'G':(price<prevPrice?'R':'G');
-}else{
-color='G';
-}
+}else color='G';
 }
 if(currentColumn>0&&matrixData[currentColumn-1]&&matrixData[currentColumn-1][row]){
 const prevBox=matrixData[currentColumn-1][row];
-if(prevBox.c===color){
-matrixData[currentColumn][row]={c:color,s:prevBox.s+1};
-}else{
-matrixData[currentColumn][row]={c:color,s:1};
-}
-}else{
-matrixData[currentColumn][row]={c:color,s:1};
-}
+matrixData[currentColumn][row]={c:color,s:prevBox.c===color?prevBox.s+1:1};
+}else matrixData[currentColumn][row]={c:color,s:1};
 ticksInCurrentMinute++;
 if(ticksInCurrentMinute>=TOTAL_ROWS){
 currentColumn++;
-if(currentColumn>=MAX_COLS){
-currentColumn=0;
-}
+if(currentColumn>=MAX_COLS) currentColumn=0;
 ticksInCurrentMinute=0;
 }
 updateStreakPanel();
@@ -254,224 +201,89 @@ canvas.style.height=(window.innerHeight-42)+'px';
 ctx.scale(dpr,dpr);
 CELL_H=(window.innerHeight-42-MARGIN_BOTTOM)/TOTAL_ROWS;
 if(isFollowing)jumpToCurrent();
-updateStreakPanel();
-updateReversalPanel();
 }
 
 function jumpToCurrent(){
 const cols=Object.keys(matrixData).map(Number);
 if(cols.length===0)return;
 const lastCol=Math.max(...cols);
-const targetX=(lastCol*CELL_W)-(window.innerWidth-MARGIN_RIGHT-MARGIN_LEFT-CELL_W);
-cameraX=Math.max(0,targetX);
-}
-
-function detectPulsingRows(){
-pulsingRows.clear();
-let allPatterns=[];
-for(let row=0;row<TOTAL_ROWS;row++){
-let redStreaks={};
-let greenStreaks={};
-Object.keys(matrixData).forEach(colKey=>{
-const col=parseInt(colKey);
-if(matrixData[col][row]){
-const data=matrixData[col][row];
-if(data.c==='R'){
-if(!redStreaks[data.s])redStreaks[data.s]=[];
-redStreaks[data.s].push(col);
-}else{
-if(!greenStreaks[data.s])greenStreaks[data.s]=[];
-greenStreaks[data.s].push(col);
-}
-}
-});
-Object.keys(redStreaks).forEach(streakKey=>{
-const streak=parseInt(streakKey);
-const freq=redStreaks[streakKey].length;
-const score=streak*(100/freq);
-const lastCol=Math.max(...redStreaks[streakKey]);
-allPatterns.push({row,streak,freq,score,color:'R',lastCol});
-});
-Object.keys(greenStreaks).forEach(streakKey=>{
-const streak=parseInt(streakKey);
-const freq=greenStreaks[streakKey].length;
-const score=streak*(100/freq);
-const lastCol=Math.max(...greenStreaks[streakKey]);
-allPatterns.push({row,streak,freq,score,color:'G',lastCol});
-});
-}
-allPatterns.sort((a,b)=>b.score-a.score);
-const top10=allPatterns.slice(0,10);
-const allCols=Object.keys(matrixData).map(Number);
-const currentCol=allCols.length>0?Math.max(...allCols):-1;
-top10.forEach(pattern=>{
-if(currentCol<0)return;
-const currentRowData=matrixData[currentCol]?matrixData[currentCol][pattern.row]:null;
-if(currentRowData){
-const oppositeColor=pattern.color==='R'?'G':'R';
-if(currentRowData.c===oppositeColor && currentRowData.s>=pattern.streak-2){
-pulsingRows.add(pattern.row);
-}
-if(currentRowData.c===pattern.color && 
-currentRowData.s>=pattern.streak-1 && 
-currentRowData.s<=pattern.streak+1){
-pulsingRows.add(pattern.row);
-}
-}
-});
+cameraX=Math.max(0,(lastCol*CELL_W)-(window.innerWidth-MARGIN_RIGHT-MARGIN_LEFT-CELL_W));
 }
 
 function updateStreakPanel(){
 const panel=document.getElementById('streakPanel');
 const indexPanel=document.getElementById('indexPanel');
-let html='';
-let indexHtml='';
+let html='', indexHtml='';
 for(let s=0;s<TOTAL_ROWS;s++){
 let rM=0,gM=0;
 Object.values(matrixData).forEach(m=>{
-if(m[s]){
-if(m[s].c==='R')rM=Math.max(rM,m[s].s);
-else gM=Math.max(gM,m[s].s);
-}
+if(m[s]){if(m[s].c==='R')rM=Math.max(rM,m[s].s); else gM=Math.max(gM,m[s].s);}
 });
 html+=`<div class="streak-row" onclick="window.openModal(${s})" style="position:absolute;top:${s*CELL_H}px;height:${CELL_H}px">
 <div class="streak-col red-side">${rM?'x'+pad(rM,2):'--'}</div>
-<div class="streak-col green-side">${gM?'x'+pad(gM,2):'--'}</div>
-</div>`;
+<div class="streak-col green-side">${gM?'x'+pad(gM,2):'--'}</div></div>`;
 indexHtml+=`<div class="index-cell" style="top:${s*CELL_H}px;height:${CELL_H}px">${pad(s,2)}</div>`;
 }
 panel.innerHTML=html;
 indexPanel.innerHTML=indexHtml;
-detectPulsingRows();
-pulsingRows.forEach(rowNum=>{
-const cells=indexPanel.querySelectorAll('.index-cell');
-if(cells[rowNum]){
-cells[rowNum].classList.add('pulsing');
-}
-});
 }
 
 function updateReversalPanel(){
 const panel=document.getElementById('reversalPanel');
-let redMap={};
-let greenMap={};
+let redMap={}, greenMap={};
 for(let row=0;row<TOTAL_ROWS;row++){
-let redStreaks={};
-let greenStreaks={};
+let rS={}, gS={};
 Object.keys(matrixData).forEach(colKey=>{
-const col=parseInt(colKey);
-if(matrixData[col][row]){
-const data=matrixData[col][row];
-if(data.c==='R'){
-if(!redStreaks[data.s])redStreaks[data.s]=[];
-redStreaks[data.s].push(col);
-}else{
-if(!greenStreaks[data.s])greenStreaks[data.s]=[];
-greenStreaks[data.s].push(col);
-}
-}
+const d=matrixData[colKey][row];
+if(d){if(d.c==='R'){if(!rS[d.s])rS[d.s]=[]; rS[d.s].push(colKey);} else {if(!gS[d.s])gS[d.s]=[]; gS[d.s].push(colKey);}}
 });
-const redStreakNums=Object.keys(redStreaks).map(Number).sort((a,b)=>{
-if(b!==a)return b-a;
-return redStreaks[a].length-redStreaks[b].length;
-});
-if(redStreakNums.length>0){
-const bestStreak=redStreakNums[0];
-const positions=redStreaks[bestStreak];
-const freq=positions.length;
-const lastCol=Math.max(...positions);
-const key=`X${pad(bestStreak,2)}-${pad(freq,2)}T`;
-if(!redMap[key])redMap[key]={streak:bestStreak,freq:freq,rows:[],score:bestStreak*(100/freq)};
-redMap[key].rows.push({row:row,lastCol:lastCol});
+[ {m:redMap, s:rS}, {m:greenMap, s:gS} ].forEach(cfg=>{
+const nums=Object.keys(cfg.s).map(Number).sort((a,b)=>b-a);
+if(nums.length>0){
+const b=nums[0], p=cfg.s[b], f=p.length, k=`X${pad(b,2)}-${pad(f,2)}T`;
+if(!cfg.m[k]) cfg.m[k]={streak:b,freq:f,rows:[],score:b*(100/f)};
+cfg.m[k].rows.push({row:row,lastCol:Math.max(...p)});
+}});
 }
-const greenStreakNums=Object.keys(greenStreaks).map(Number).sort((a,b)=>{
-if(b!==a)return b-a;
-return greenStreaks[a].length-greenStreaks[b].length;
-});
-if(greenStreakNums.length>0){
-const bestStreak=greenStreakNums[0];
-const positions=greenStreaks[bestStreak];
-const freq=positions.length;
-const lastCol=Math.max(...positions);
-const key=`X${pad(bestStreak,2)}-${pad(freq,2)}T`;
-if(!greenMap[key])greenMap[key]={streak:bestStreak,freq:freq,rows:[],score:bestStreak*(100/freq)};
-greenMap[key].rows.push({row:row,lastCol:lastCol});
-}
-}
-const redEntries=Object.keys(redMap).map(key=>({key,data:redMap[key]})).sort((a,b)=>b.data.score-a.data.score);
-const greenEntries=Object.keys(greenMap).map(key=>({key,data:greenMap[key]})).sort((a,b)=>b.data.score-a.data.score);
-const maxRows=Math.max(redEntries.length,greenEntries.length,1);
+const rE=Object.keys(redMap).map(k=>({k,d:redMap[k]})).sort((a,b)=>b.d.score-a.d.score);
+const gE=Object.keys(greenMap).map(k=>({k,d:greenMap[k]})).sort((a,b)=>b.d.score-a.d.score);
 let html='';
-for(let i=0;i<maxRows;i++){
-const redEntry=redEntries[i];
-const greenEntry=greenEntries[i];
+for(let i=0;i<Math.max(rE.length,gE.length,1);i++){
 html+=`<div class="reversal-row" style="position:absolute;top:${i*CELL_H}px;height:${CELL_H}px">`;
-if(redEntry){
-const redData=JSON.stringify(redEntry.data.rows).replace(/"/g,'&quot;');
-const displayKey=`X${pad(redEntry.data.streak,2)}-${pad(redEntry.data.freq,2)}T`;
-html+=`<div class="reversal-col red-side" onclick="window.openReversalModal('${displayKey}',${redData},'red')">${displayKey}</div>`;
-}else{
-html+='<div class="reversal-col red-side">--</div>';
-}
-if(greenEntry){
-const greenData=JSON.stringify(greenEntry.data.rows).replace(/"/g,'&quot;');
-const displayKey=`X${pad(greenEntry.data.streak,2)}-${pad(greenEntry.data.freq,2)}T`;
-html+=`<div class="reversal-col green-side" onclick="window.openReversalModal('${displayKey}',${greenData},'green')">${displayKey}</div>`;
-}else{
-html+='<div class="reversal-col green-side">--</div>';
-}
+[ {e:rE[i], c:'red'}, {e:gE[i], c:'green'} ].forEach(side=>{
+if(side.e){
+const d=JSON.stringify(side.e.d.rows).replace(/"/g,'&quot;');
+html+=`<div class="reversal-col ${side.c}-side" onclick="window.openReversalModal('${side.e.k}',${d},'${side.c}')">${side.e.k}</div>`;
+}else html+=`<div class="reversal-col ${side.c}-side">--</div>`;
+});
 html+='</div>';
 }
 panel.innerHTML=html;
 }
 
 function draw(){
-const width=window.innerWidth;
-const height=window.innerHeight-42;
 ctx.fillStyle='#ffffff';
-ctx.fillRect(0,0,width,height);
+ctx.fillRect(0,0,window.innerWidth,window.innerHeight-42);
 const now=new Date();
-const startOfWeekUTC=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()-(now.getUTCDay()===0?6:now.getUTCDay()-1),0,0,0));
+const monday=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()-(now.getUTCDay()===0?6:now.getUTCDay()-1),0,0,0));
 ctx.save();
 ctx.translate(MARGIN_LEFT-cameraX,0);
-let startCol=Math.max(0,Math.floor(cameraX/CELL_W));
-let endCol=Math.min(MAX_COLS-1,Math.floor((cameraX+width)/CELL_W)+1);
-const beforeLiveColIndex=currentColumn>0?currentColumn-1:-1;
-for(let a=startCol;a<=endCol;a++){
+for(let a=Math.max(0,Math.floor(cameraX/CELL_W));a<=Math.min(MAX_COLS-1,Math.floor((cameraX+window.innerWidth)/CELL_W)+1);a++){
 let x=a*CELL_W;
 if(matrixData[a]){
-let beforeLiveMaxStreak=0;
-if(a===beforeLiveColIndex){
-Object.values(matrixData[a]).forEach(d=>{
-if(d.s>1&&d.s>beforeLiveMaxStreak)beforeLiveMaxStreak=d.s;
-});
-}
 for(let s in matrixData[a]){
 const d=matrixData[a][s];
-const isBeforeLivePulsing=(a===beforeLiveColIndex&&d.s===beforeLiveMaxStreak&&d.s>1);
-const scale=isBeforeLivePulsing?(1.0+(0.18*Math.abs(Math.sin(Date.now()/200)))):1;
-if(isBeforeLivePulsing){
-ctx.save();
-ctx.translate(x+CELL_W/2,(s*CELL_H)+CELL_H/2);
-ctx.scale(scale,scale);
-ctx.translate(-(x+CELL_W/2),-((s*CELL_H)+CELL_H/2));
-}
 ctx.fillStyle=d.c==='G'?'#10b981':'#ef4444';
 ctx.font='700 9px ui-monospace,monospace';
 ctx.textAlign='center';
 ctx.textBaseline='middle';
 ctx.fillText('x'+d.s,x+CELL_W/2,s*CELL_H+CELL_H/2);
-if(isBeforeLivePulsing)ctx.restore();
-}
-}
+}}
 ctx.fillStyle='#1f2937';
-ctx.textAlign='center';
-ctx.textBaseline='top';
 ctx.font='700 7px ui-monospace,monospace';
-const mcmPosition=a%MAX_COLS;
-ctx.fillText(pad(mcmPosition,5),x+CELL_W/2,TOTAL_ROWS*CELL_H+2);
-const colTimestamp=startOfWeekUTC.getTime()+(a*30000);
-const localDate=new Date(colTimestamp);
+ctx.textAlign='center';
+ctx.fillText(pad(a,5),x+CELL_W/2,TOTAL_ROWS*CELL_H+2);
+const localDate=new Date(monday.getTime()+(a*30000));
 ctx.font='500 6px ui-monospace,monospace';
 ctx.fillStyle='#6b7280';
 ctx.fillText(`${pad(localDate.getHours())}:${pad(localDate.getMinutes())}`,x+CELL_W/2,TOTAL_ROWS*CELL_H+11);
@@ -479,73 +291,29 @@ ctx.fillText(`${pad(localDate.getHours())}:${pad(localDate.getMinutes())}`,x+CEL
 ctx.restore();
 ctx.save();
 for(let row=0;row<TOTAL_ROWS;row++){
-const y=row*CELL_H;
 ctx.fillStyle='#1f2937';
 ctx.font='700 8px ui-monospace,monospace';
 ctx.textAlign='center';
-ctx.textBaseline='middle';
-ctx.fillText(pad(row,2),MARGIN_LEFT/2,y+CELL_H/2);
+ctx.fillText(pad(row,2),MARGIN_LEFT/2,row*CELL_H+CELL_H/2);
 }
 ctx.restore();
 requestAnimationFrame(draw);
 }
 
-// Window Event Listeners & Interactions
-canvas.addEventListener('mousedown',e=>{
-isDragging=true;
-lastMouseX=e.clientX;
-isFollowing=false;
-document.getElementById('followBtn').classList.remove('active');
-});
-window.addEventListener('mousemove',e=>{
-if(isDragging){
-cameraX-=(e.clientX-lastMouseX);
-cameraX=Math.max(0,Math.min(cameraX,(MAX_COLS*CELL_W)-(window.innerWidth-MARGIN_RIGHT-MARGIN_LEFT)));
-lastMouseX=e.clientX;
-}
-});
+canvas.addEventListener('mousedown',e=>{isDragging=true;lastMouseX=e.clientX;isFollowing=false;document.getElementById('followBtn').classList.remove('active');});
+window.addEventListener('mousemove',e=>{if(isDragging){cameraX-=(e.clientX-lastMouseX);cameraX=Math.max(0,cameraX);lastMouseX=e.clientX;}});
 window.addEventListener('mouseup',()=>isDragging=false);
-let lastTouchX=0;
-canvas.addEventListener('touchstart',e=>{
-isDragging=true;
-lastTouchX=e.touches[0].clientX;
-isFollowing=false;
-document.getElementById('followBtn').classList.remove('active');
-e.preventDefault();
-},{passive:false});
-canvas.addEventListener('touchmove',e=>{
-if(isDragging&&e.touches.length>0){
-const touchX=e.touches[0].clientX;
-cameraX-=(touchX-lastTouchX);
-cameraX=Math.max(0,Math.min(cameraX,(MAX_COLS*CELL_W)-(window.innerWidth-MARGIN_RIGHT-MARGIN_LEFT)));
-lastTouchX=touchX;
-}
-e.preventDefault();
-},{passive:false});
-canvas.addEventListener('touchend',()=>{isDragging=false;});
-canvas.addEventListener('touchcancel',()=>{isDragging=false;});
 
-window.closeModal = function(){
-document.getElementById('modal').classList.remove('show');
-document.getElementById('modalOverlay').classList.remove('show');
-}
-
-window.openModal = function(sec){
+window.closeModal=()=>{document.getElementById('modal').classList.remove('show');document.getElementById('modalOverlay').classList.remove('show');}
+window.openModal=(sec)=>{
 document.getElementById('modalTitle').innerText=`${pad(sec,2)} ANOMALY HISTORY`;
-document.getElementById('modalTitle').style.color='var(--text)';
 document.getElementById('modalDualContent').style.display='flex';
 document.getElementById('modalSingleContent').style.display='none';
 let rS=[],gS=[];
-Object.keys(matrixData).forEach(m=>{
-if(matrixData[m][sec]){
-const d=matrixData[m][sec];
-(d.c==='R'?rS:gS).push(d.s);
-}
-});
+Object.values(matrixData).forEach(m=>{if(m[sec]){(m[sec].c==='R'?rS:gS).push(m[sec].s);}});
 const getSum=(arr)=>{
-const counts={};
-arr.forEach(s=>counts[s]=(counts[s]||0)+1);
-return Object.keys(counts).map(s=>({s:parseInt(s),c:counts[s]})).sort((a,b)=>b.s-a.s);
+const c={}; arr.forEach(s=>c[s]=(c[s]||0)+1);
+return Object.keys(c).map(s=>({s:parseInt(s),c:c[s]})).sort((a,b)=>b.s-a.s);
 };
 document.getElementById('rD').innerHTML=getSum(rS).map(i=>`<div style="padding:5px;border-bottom:1px solid var(--grid);text-align:center;color:var(--red)">X${pad(i.s,2)} (${i.c})</div>`).join('');
 document.getElementById('gD').innerHTML=getSum(gS).map(i=>`<div style="padding:5px;border-bottom:1px solid var(--grid);text-align:center;color:var(--green)">X${pad(i.s,2)} (${i.c})</div>`).join('');
@@ -553,39 +321,19 @@ document.getElementById('modal').classList.add('show');
 document.getElementById('modalOverlay').classList.add('show');
 }
 
-window.openReversalModal = function(key,rows,color){
-const colorVar = color === 'red' ? 'var(--red)' : 'var(--green)';
-document.getElementById('modalTitle').innerText=`${color.toUpperCase()} ${key}`;
-document.getElementById('modalTitle').style.color=colorVar;
+window.openReversalModal=(k,r,c)=>{
+document.getElementById('modalTitle').innerText=`${c.toUpperCase()} ${k}`;
+document.getElementById('modalTitle').style.color=c==='red'?'var(--red)':'var(--green)';
 document.getElementById('modalDualContent').style.display='none';
 document.getElementById('modalSingleContent').style.display='flex';
-let contentHTML='';
-if(rows&&rows.length>0){
-rows.forEach(r=>{
-contentHTML+=`<div style="color:var(--text)">${pad(r.row,2)}</div>`;
-});
-}else{
-contentHTML='<div style="padding:20px;text-align:center;color:var(--text-muted);width:100%">No data</div>';
-}
-document.getElementById('modalSingleContent').innerHTML=contentHTML;
+document.getElementById('modalSingleContent').innerHTML=r.map(row=>`<div style="color:var(--text)">${pad(row.row,2)}</div>`).join('');
 document.getElementById('modal').classList.add('show');
 document.getElementById('modalOverlay').classList.add('show');
 }
 
-document.getElementById('followBtn').onclick=function(){
-isFollowing=!isFollowing;
-this.classList.toggle('active',isFollowing);
-if(isFollowing)jumpToCurrent();
-};
-
+document.getElementById('followBtn').onclick=function(){isFollowing=!isFollowing;this.classList.toggle('active',isFollowing);if(isFollowing)jumpToCurrent();};
 window.onresize=resize;
-
-(async function init() {
-    await loadFirebaseData();
-    resize();
-    connectDerivWS();
-    draw();
-})();
+(async function init(){await loadFirebaseData();resize();connectDerivWS();draw();})();
 </script>
 </body>
 </html>
