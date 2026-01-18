@@ -46,7 +46,7 @@ function runDataCollection() {
         ws.on('open', () => {
             console.log("Connected to Deriv. Fetching BTCUSD...");
             ws.send(JSON.stringify({
-                ticks_history: "cryBTCUSD", // CHANGED TO BTC
+                ticks_history: "cryBTCUSD", // <--- CHANGED TO BTC
                 adjust_start_time: 1,
                 count: 1000,
                 end: "latest",
