@@ -3,269 +3,76 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>MCM(30) BTC LIVE</title>
+<title>MCM(30) BTC CLOUD</title>
 <style>
-:root {
-    --bg: #000; 
-    --grid: #222; 
-    --meta: #888;
-    --red: #F00; 
-    --green: #0F0; 
-    --header-h: 40px; 
-    --panel-w-streak: 64px;   
-    --panel-w-index: 36px;    
-    --panel-w-reversal: 120px; 
-    --total-right-margin: 220px; 
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-::-webkit-scrollbar { display: none; }
-* { -ms-overflow-style: none; scrollbar-width: none; }
-body, html {
-    background: var(--bg);
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-    font-family: Consolas, monospace;
-    touch-action: none;
-    color: var(--red);
-    cursor: default;
-}
-#ui {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%;
-    background: var(--bg);
-    padding: 0 16px;
-    z-index: 1000;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid var(--grid);
-    height: var(--header-h);
-}
-h1 {
-    font-size: 14px;
-    font-weight: 800;
-    letter-spacing: 1.5px;
-    color: var(--green);
-    text-transform: uppercase;
-}
-.status {
-    font-weight: 700;
-    border: 1px solid var(--grid);
-    padding: 4px 8px;
-    font-size: 11px;
-    background: var(--bg);
-    letter-spacing: 0.5px;
-    color: var(--red);
-}
-button {
-    background: var(--bg);
-    color: var(--meta);
-    border: 1px solid var(--grid);
-    padding: 6px 12px;
-    font-weight: 700;
-    font-size: 11px;
-    cursor: pointer;
-    font-family: inherit;
-}
-button:hover { background: var(--grid); color: var(--red); border-color: var(--red); }
-#stage {
-    position: absolute;
-    top: var(--header-h);
-    left: 0;
-    width: 100vw;
-    height: calc(100vh - var(--header-h));
-    display: flex;
-    align-items: flex-start; 
-    padding-bottom: 4px; 
-}
-#chartContainer {
-    flex: 1;
-    position: relative;
-    overflow: hidden;
-    height: 100%;
-}
-canvas {
-    display: block;
-    width: 100%;
-    height: 100%;
-    cursor: crosshair;
-}
-#panelsContainer {
-    width: var(--total-right-margin);
-    height: 100%;
-    display: flex;
-    border-left: 1px solid var(--grid);
-    background: var(--bg);
-    flex-shrink: 0; 
-}
-.panel {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    border-left: 1px solid var(--grid);
-}
-#streakPanel { width: var(--panel-w-streak); border-left: none; }
-#indexPanel { width: var(--panel-w-index); }
-#reversalPanel { width: var(--panel-w-reversal); }
-.streak-row, .reversal-row, .index-cell {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0; 
-}
-.streak-row:hover .red-side { background: var(--red); color: var(--bg) !important; }
-.streak-row:hover .green-side { background: var(--green); color: var(--bg) !important; }
-.reversal-col.red-side:hover { background: var(--red); color: var(--bg) !important; }
-.reversal-col.green-side:hover { background: var(--green); color: var(--bg) !important; }
-.streak-col, .reversal-col {
-    flex: 1;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px !important; 
-    font-weight: 700; 
-    line-height: 1;
-    pointer-events: none;
-    letter-spacing: 0; 
-}
-.reversal-col {
-    pointer-events: auto; 
-    cursor: pointer;
-    white-space: nowrap; 
-    overflow: hidden;    
-}
-.streak-col.red-side, .reversal-col.red-side { 
-    color: var(--red); 
-    border-right: 1px solid var(--grid);
-    border-bottom: 1px solid var(--grid);
-}
-.streak-col.green-side, .reversal-col.green-side { 
-    color: var(--green); 
-    border-bottom: 1px solid var(--grid);
-}
-.index-cell {
-    color: var(--meta);
-    border-bottom: 1px solid var(--grid);
-    font-weight: 700;
-    font-size: 10px !important; 
-}
-.index-cell.pulsing {
-    background: var(--red);
-    color: var(--bg);
-}
-#modalOverlay { 
-    display: none; 
-    position: fixed; 
-    top: 0; left: 0; 
-    width: 100%; height: 100%; 
-    background: rgba(0,0,0,0.85); 
-    z-index: 1999; 
-    cursor: pointer; 
-}
-#modal { 
-    display: none; 
-    position: fixed; 
-    top: 50%; left: 50%; 
-    transform: translate(-50%, -50%); 
-    width: auto; 
-    height: auto; 
-    max-width: 320px;
-    max-height: 80vh;
-    background: var(--bg); 
-    z-index: 2000; 
-    padding: 16px; 
-    flex-direction: column;
-    border: 1px solid var(--grid); 
-    box-shadow: 0 0 30px rgba(0,0,0,1); 
-}
-#modal.show, #modalOverlay.show { display: flex; }
-.modal-content { display: flex; gap: 12px; flex: 1; overflow: hidden; margin-top: 8px; }
-.modal-column { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
-.modal-column-header { padding: 10px; text-align: center; font-weight: 900; font-size: 13px; background: var(--bg); letter-spacing: 1px; }
-.modal-column-content { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
-.modal-item { padding: 8px; text-align: center; font-size: 12px; font-weight: 700; }
-#modalSingleContent { 
-    display: flex; flex-wrap: wrap; gap: 4px; 
-    justify-content: center; align-items: flex-start; 
-    padding: 12px; 
-    background: var(--bg); 
-    max-height: 60vh; 
-    overflow-y: auto; 
-}
-#modalSingleContent > div { 
-    padding: 8px 12px; 
-    background: var(--bg); 
-    font-weight: 700; font-size: 12px; 
-    min-width: 50px; 
-    text-align: center; 
-}
-#perfStats {
-    position: fixed;
-    top: 50px;
-    right: 10px;
-    background: rgba(0,0,0,0.9);
-    border: 1px solid var(--green);
-    padding: 8px;
-    font-size: 10px;
-    color: var(--green);
-    z-index: 999;
-    font-family: monospace;
-}
+:root{--red:#ef4444;--green:#10b981;--blue:#3b82f6;--bg:#f5f5f5;--ui-bg:#fff;--grid:#d1d5db;--border:#9ca3af;--text:#1f2937;--text-muted:#6b7280;--shadow:rgba(0,0,0,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body,html{background:var(--bg);width:100vw;height:100vh;overflow:hidden;font-family:ui-monospace,monospace;touch-action:none;color:var(--text)}
+#ui{position:fixed;top:0;left:0;width:100%;background:var(--ui-bg);padding:0 12px;z-index:1000;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--grid);height:42px;box-shadow:0 2px 8px var(--shadow)}
+.status{font-weight:600;border:1px solid var(--green);padding:2px 8px;font-size:10px;color:var(--green)}
+button{background:#fff;color:var(--blue);border:2px solid var(--blue);padding:4px 12px;font-weight:600;font-size:10px;cursor:pointer;font-family:inherit;transition:all .2s;border-radius:3px}
+button:hover{background:var(--blue);color:#fff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(59,130,246,.3)}
+button.active{background:var(--blue);color:#fff;box-shadow:0 2px 8px rgba(59,130,246,.4)}
+canvas{display:block;margin-top:42px;cursor:grab;will-change:transform}
+canvas:active{cursor:grabbing}
+#streakPanel,#indexPanel,#reversalPanel{position:fixed;top:42px;height:calc(100vh - 42px);background:var(--ui-bg);border-left:2px solid var(--grid);border-right:2px solid var(--grid);z-index:999;box-shadow:-2px 0 8px var(--shadow);overflow:hidden;will-change:contents}
+#streakPanel{right:105px;width:40px}
+#indexPanel{right:75px;width:30px}
+#reversalPanel{right:0;width:75px}
+.streak-row,.reversal-row{display:flex;width:100%;border-bottom:1px solid var(--grid);cursor:pointer;transition:background .2s}
+.streak-row:hover,.reversal-col:hover{background:rgba(59,130,246,.08)}
+.streak-col,.reversal-col{flex:1;display:flex;align-items:center;justify-content:center;font-size:5px;font-weight:700;padding:.5px;line-height:1.05}
+.streak-col.red-side,.reversal-col.red-side{color:var(--red);border-right:1px solid var(--grid)}
+.streak-col.green-side,.reversal-col.green-side{color:var(--green)}
+.reversal-col{text-align:center;white-space:nowrap;overflow:hidden;letter-spacing:-.2px;cursor:pointer;transition:background .2s}
+.index-cell{position:absolute;width:100%;display:flex;align-items:center;justify-content:center;font-size:5px;font-weight:700;color:var(--text);border-bottom:1px solid var(--grid);padding:.5px;line-height:1.05;transition:all .3s}
+.index-cell.pulsing{animation:pulseIndex 1s ease-in-out infinite;color:var(--blue);font-weight:900}
+@keyframes pulseIndex{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.3);opacity:.7}}
+#modalOverlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:1999;backdrop-filter:blur(4px)}
+#modal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);max-width:90vw;max-height:90vh;background:var(--ui-bg);border:2px solid var(--border);z-index:2000;padding:20px;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3);border-radius:12px}
+#modal.show,#modalOverlay.show{display:flex}
+.modal-content{display:flex;gap:10px;flex:1;overflow:hidden}
+.modal-column{flex:1;display:flex;flex-direction:column;border:2px solid var(--grid);overflow:hidden;background:var(--bg);border-radius:8px}
+.modal-column-header{padding:10px;text-align:center;font-weight:700;font-size:11px;border-bottom:2px solid var(--grid);background:var(--ui-bg);color:var(--text)}
+.modal-column-content{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+#modalSingleContent{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:flex-start;padding:15px;border:2px solid var(--grid);background:var(--bg);border-radius:8px;max-height:70vh;overflow-y:auto}
+#modalSingleContent>div{padding:8px 12px;border:1px solid var(--grid);background:var(--ui-bg);border-radius:4px;font-weight:600;font-size:11px;min-width:50px;text-align:center}
+@media(max-width:500px){#modal{width:90%;max-width:400px}}
 </style>
 </head>
-<body onclick="window.initAudio()">
+<body>
 <div id="ui">
-    <div style="display:flex;gap:12px;align-items:center">
-        <h1>MCM(30) BTC LIVE</h1>
-        <span id="status" class="status">CONNECTING...</span>
-        <span id="clock" style="color:var(--meta);font-size:11px;font-weight:700">--:--:-- UTC</span>
-    </div>
-    <div style="display:flex;gap:8px">
-        <button onclick="window.togglePerf()">PERF</button>
-        <button onclick="location.reload()">REFRESH</button>
-    </div>
+<div style="display:flex;gap:12px;align-items:center">
+<h1 style="font-size:13px;letter-spacing:1px">MCM(30) BTC CLOUD</h1>
+<span id="status" class="status">OFFLINE</span>
 </div>
-
-<div id="perfStats" style="display:none">
-    FPS: <span id="fps">0</span><br>
-    Draw: <span id="drawTime">0</span>ms<br>
-    Cells: <span id="cellCount">0</span><br>
-    Memory: <span id="memUsage">0</span>KB
+<div style="display:flex;gap:8px">
+<button id="followBtn" class="active">FOLLOW</button>
+<button onclick="location.reload()">REFRESH</button>
 </div>
-
-<div id="stage">
-    <div id="chartContainer">
-        <canvas id="matrixCanvas"></canvas>
-    </div>
-    <div id="panelsContainer">
-        <div id="streakPanel" class="panel"></div>
-        <div id="indexPanel" class="panel"></div>
-        <div id="reversalPanel" class="panel"></div>
-    </div>
 </div>
-
-<div id="modalOverlay" onclick="window.closeModal()"></div>
+<canvas id="matrixCanvas"></canvas>
+<div id="streakPanel"></div>
+<div id="indexPanel"></div>
+<div id="reversalPanel"></div>
+<div id="modalOverlay" onclick="closeModal()"></div>
 <div id="modal">
-    <div id="modalTitle" style="font-weight:800;font-size:14px;color:var(--red);letter-spacing:1px;text-align:center;padding-bottom:12px;border-bottom:1px solid var(--grid)"></div>
-    <div id="modalSingleContent" style="display:none"></div>
-    <div class="modal-content" id="modalDualContent">
-        <div class="modal-column" style="border:1px solid var(--red)">
-            <div class="modal-column-header" style="color:var(--red);border-bottom:1px solid var(--red)">RED</div>
-            <div class="modal-column-content" id="rD"></div>
-        </div>
-        <div class="modal-column" style="border:1px solid var(--green)">
-            <div class="modal-column-header" style="color:var(--green);border-bottom:1px solid var(--green)">GREEN</div>
-            <div class="modal-column-content" id="gD"></div>
-        </div>
-    </div>
+<div id="modalTitle" style="font-weight:700;border-bottom:2px solid var(--grid);padding-bottom:10px;margin-bottom:10px;text-align:center;font-size:12px;color:var(--text)"></div>
+<div id="modalSingleContent" style="display:none"></div>
+<div class="modal-content" id="modalDualContent">
+<div class="modal-column">
+<div class="modal-column-header" style="color:var(--red)">RED</div>
+<div class="modal-column-content" id="rD"></div>
+</div>
+<div class="modal-column">
+<div class="modal-column-header" style="color:var(--green)">GREEN</div>
+<div class="modal-column-content" id="gD"></div>
+</div>
+</div>
 </div>
 
 <script type="module">
+// FIREBASE IMPORT
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
@@ -282,66 +89,52 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-const canvas = document.getElementById('matrixCanvas');
-const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
-const statusEl = document.getElementById('status');
-const clockEl = document.getElementById('clock');
-const DERIV_WS = "wss://ws.derivws.com/websockets/v3?app_id=1089";
-const TOKEN = "TpVIBWpqet5X8AH";
+const canvas=document.getElementById('matrixCanvas');
+const ctx=canvas.getContext('2d',{alpha:false,desynchronized:true});
+const statusEl=document.getElementById('status');
+const DERIV_WS="wss://ws.derivws.com/websockets/v3?app_id=1089";
+const TOKEN="TpVIBWpqet5X8AH";
+const SYMBOL="cryBTCUSD"; // BITCOIN
+let ws=null,subscriptionId=null,lastPrice=null,currentColumn=0,ticksInCurrentMinute=0;
+let matrixData={};
+let cameraX=0,isFollowing=true,isDragging=false,lastMouseX=0;
+let pulsingRows=new Set();
+const CELL_W=32;
+let CELL_H=12;
+const MARGIN_LEFT=35;
+const MARGIN_RIGHT=145;
+const MARGIN_BOTTOM=22;
+const MAX_COLS=14400;
+const TOTAL_ROWS=30;
+const MCM_LOOKBACK=30;
+const pad=(n,size=2)=>String(n).padStart(size,'0');
 
-// CHANGED TO BITCOIN FOR LIVE TESTING
-const SYMBOL = "cryBTCUSD";
+let tickHistory=[];
 
-const TOTAL_ROWS = 30;
-const MAX_COLS = 14400;
-const MATRIX_SIZE = MAX_COLS * TOTAL_ROWS;
-
-let matrixBinary = new Uint16Array(MATRIX_SIZE);
-const MAX_TICK_HISTORY = 1000;
-const tickPrices = new Float64Array(MAX_TICK_HISTORY);
-const tickTimestamps = new Float64Array(MAX_TICK_HISTORY);
-let tickIndex = 0;
-let tickCount = 0;
-
-let ws = null;
-let currentColumn = 0;
-let currentRow = 0;
-let audioCtx = null;
-let perfVisible = false;
-
-window.initAudio = function() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-}
-
-window.togglePerf = function() {
-    perfVisible = !perfVisible;
-    document.getElementById('perfStats').style.display = perfVisible ? 'block' : 'none';
-}
-
-window.closeModal = function() {
-    document.getElementById('modal').classList.remove('show');
-    document.getElementById('modalOverlay').classList.remove('show');
-}
-
+// --- NEW CLOUD LOADER ---
 async function loadFirebaseData() {
     statusEl.innerText = "LOADING DB...";
-    statusEl.style.color = "#FE0";
-    statusEl.style.borderColor = "#FE0";
     try {
         const snapshot = await get(ref(db, 'tick_history'));
         if (snapshot.exists()) {
             const data = snapshot.val();
-            // Note: DB likely has EURUSD data. Loading it into BTC live chart 
-            // will cause a jump, but it verifies connection.
             if (data.prices && data.times) {
                 console.log(`[CLOUD] Loaded ${data.prices.length} ticks`);
+                // Clear existing data
+                tickHistory = [];
+                matrixData = {};
+                currentColumn = 0;
+                ticksInCurrentMinute = 0;
+                
+                // Replay history
                 for(let i = 0; i < data.prices.length; i++) {
-                    const t = { quote: data.prices[i], epoch: data.times[i] };
-                    handleTick(t, true); 
+                    const t = { 
+                        quote: data.prices[i], 
+                        epoch: data.times[i] 
+                    };
+                    handleTick(t); 
                 }
                 statusEl.innerText = "DB SYNCED";
-                updatePanels();
                 draw();
             }
         } else {
@@ -353,453 +146,443 @@ async function loadFirebaseData() {
     }
 }
 
-function packCell(color, streak) {
-    const colorBit = color === 'G' ? 1 : 0;
-    return (colorBit << 15) | (streak & 0x7FFF);
+function connectDerivWS(){
+ws=new WebSocket(DERIV_WS);
+ws.onopen=()=>{
+console.log('Connected to Deriv WebSocket');
+ws.send(JSON.stringify({authorize:TOKEN}));
+};
+ws.onmessage=(msg)=>{
+const data=JSON.parse(msg.data);
+if(data.authorize){
+console.log('Authorized successfully');
+statusEl.innerText="LIVE";
+statusEl.classList.add('live');
+ws.send(JSON.stringify({ticks:SYMBOL,subscribe:1}));
+}
+if(data.tick){
+handleTick(data.tick);
+}
+if(data.subscription){
+subscriptionId=data.subscription.id;
+console.log('Subscribed to',SYMBOL);
+}
+};
+ws.onerror=(error)=>{
+console.error('WebSocket error:',error);
+statusEl.innerText="ERROR";
+statusEl.classList.remove('live');
+};
+ws.onclose=()=>{
+console.log('WebSocket closed, reconnecting...');
+statusEl.innerText="RECONNECTING";
+statusEl.classList.remove('live');
+setTimeout(connectDerivWS,3000);
+};
 }
 
-function unpackCell(packed) {
-    return { c: (packed >> 15) ? 'G' : 'R', s: packed & 0x7FFF };
+function handleTick(tick){
+const price=tick.quote;
+const timestamp=tick.epoch*1000;
+tickHistory.push({price,timestamp});
+if(!matrixData[currentColumn]){
+matrixData[currentColumn]={};
+}
+const row=Math.min(ticksInCurrentMinute,TOTAL_ROWS-1);
+let color=null;
+if(tickHistory.length>=MCM_LOOKBACK+1){
+const priceNTicksAgo=tickHistory[tickHistory.length-(MCM_LOOKBACK+1)].price;
+if(price>priceNTicksAgo){
+color='G';
+}else if(price<priceNTicksAgo){
+color='R';
+}else{
+for(let i=tickHistory.length-2;i>=Math.max(0,tickHistory.length-(MCM_LOOKBACK+1));i--){
+if(i>=MCM_LOOKBACK){
+const oldPrice=tickHistory[i-MCM_LOOKBACK].price;
+const currentPrice=tickHistory[i].price;
+if(currentPrice>oldPrice){
+color='G';
+break;
+}else if(currentPrice<oldPrice){
+color='R';
+break;
+}
+}
+}
+if(!color)color='G';
+}
+}else{
+if(tickHistory.length>=2){
+const prevPrice=tickHistory[tickHistory.length-2].price;
+color=price>prevPrice?'G':(price<prevPrice?'R':'G');
+}else{
+color='G';
+}
+}
+if(currentColumn>0&&matrixData[currentColumn-1]&&matrixData[currentColumn-1][row]){
+const prevBox=matrixData[currentColumn-1][row];
+if(prevBox.c===color){
+matrixData[currentColumn][row]={c:color,s:prevBox.s+1};
+}else{
+matrixData[currentColumn][row]={c:color,s:1};
+}
+}else{
+matrixData[currentColumn][row]={c:color,s:1};
+}
+ticksInCurrentMinute++;
+if(ticksInCurrentMinute>=TOTAL_ROWS){
+currentColumn++;
+if(currentColumn>=MAX_COLS){
+currentColumn=0;
+}
+ticksInCurrentMinute=0;
+}
+updateStreakPanel();
+updateReversalPanel();
+if(isFollowing)jumpToCurrent();
 }
 
-function setCell(col, row, color, streak) {
-    if (col >= MAX_COLS || row >= TOTAL_ROWS) return;
-    const idx = col * TOTAL_ROWS + row;
-    matrixBinary[idx] = packCell(color, streak);
+function resize(){
+const dpr=window.devicePixelRatio||1;
+canvas.width=window.innerWidth*dpr;
+canvas.height=(window.innerHeight-42)*dpr;
+canvas.style.width=window.innerWidth+'px';
+canvas.style.height=(window.innerHeight-42)+'px';
+ctx.scale(dpr,dpr);
+CELL_H=(window.innerHeight-42-MARGIN_BOTTOM)/TOTAL_ROWS;
+if(isFollowing)jumpToCurrent();
+updateStreakPanel();
+updateReversalPanel();
 }
 
-function getCell(col, row) {
-    if (col < 0 || col >= MAX_COLS || row < 0 || row >= TOTAL_ROWS) return null;
-    const packed = matrixBinary[col * TOTAL_ROWS + row];
-    if (packed === 0) return null;
-    return unpackCell(packed);
+function jumpToCurrent(){
+const cols=Object.keys(matrixData).map(Number);
+if(cols.length===0)return;
+const lastCol=Math.max(...cols);
+const targetX=(lastCol*CELL_W)-(window.innerWidth-MARGIN_RIGHT-MARGIN_LEFT-CELL_W);
+cameraX=Math.max(0,targetX);
 }
 
-// WEEKEND CHECK REMOVED
-function getWeekInfo(timeInput = null) {
-    const now = timeInput ? new Date(timeInput * 1000) : new Date();
-    // Simplified: Just calculate based on seconds since Monday 00:00 equivalent
-    // This allows it to run on Sunday without blocking
-    const day = now.getUTCDay(); // 0=Sun, 1=Mon...
-    
-    // Force Sunday to be treated as Day 6 (end of week) instead of 0 for linear plotting
-    let normalizedDay = day === 0 ? 6 : day - 1; 
-    
-    const h = now.getUTCHours();
-    const m = now.getUTCMinutes();
-    const s = now.getUTCSeconds();
-    
-    const totalSeconds = (normalizedDay * 86400) + (h * 3600) + (m * 60) + s;
-    const col = Math.floor(totalSeconds / 30);
-    const row = totalSeconds % 30;
-    return { col, row };
+function detectPulsingRows(){
+pulsingRows.clear();
+let allPatterns=[];
+for(let row=0;row<TOTAL_ROWS;row++){
+let redStreaks={};
+let greenStreaks={};
+Object.keys(matrixData).forEach(colKey=>{
+const col=parseInt(colKey);
+if(matrixData[col][row]){
+const data=matrixData[col][row];
+if(data.c==='R'){
+if(!redStreaks[data.s])redStreaks[data.s]=[];
+redStreaks[data.s].push(col);
+}else{
+if(!greenStreaks[data.s])greenStreaks[data.s]=[];
+greenStreaks[data.s].push(col);
 }
-
-function playTone(type) {
-    if (!audioCtx) return;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.frequency.value = type === 'G' ? 1200 : 150;
-    osc.type = type === 'G' ? 'sine' : 'triangle';
-    osc.start();
-    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
-    osc.stop(audioCtx.currentTime + 0.1);
 }
-
-function handleTick(tick, silent = false) {
-    const price = tick.quote;
-    const MCM_LOOKBACK = 30;
-
-    tickPrices[tickIndex] = price;
-    tickTimestamps[tickIndex] = tick.epoch * 1000;
-    tickIndex = (tickIndex + 1) % MAX_TICK_HISTORY;
-    if (tickCount < MAX_TICK_HISTORY) tickCount++;
-
-    const info = getWeekInfo(tick.epoch);
-    
-    // REMOVED WEEKEND BLOCKING LOGIC
-    
-    currentColumn = info.col;
-    currentRow = info.row;
-    
-    if (currentColumn >= MAX_COLS) return;
-
-    let color = 'G';
-    if (tickCount >= MCM_LOOKBACK + 1) {
-        const oldIdx = (tickIndex - MCM_LOOKBACK - 1 + MAX_TICK_HISTORY) % MAX_TICK_HISTORY;
-        const old = tickPrices[oldIdx];
-        if (price > old) color = 'G';
-        else if (price < old) color = 'R';
-        else {
-            for (let i = 2; i <= MCM_LOOKBACK + 1 && i <= tickCount; i++) {
-                const idx1 = (tickIndex - i - MCM_LOOKBACK + MAX_TICK_HISTORY) % MAX_TICK_HISTORY;
-                const idx2 = (tickIndex - i + MAX_TICK_HISTORY) % MAX_TICK_HISTORY;
-                const p1 = tickPrices[idx1];
-                const p2 = tickPrices[idx2];
-                if (p2 > p1) { color = 'G'; break; }
-                else if (p2 < p1) { color = 'R'; break; }
-            }
-        }
-    }
-    
-    if (!silent) playTone(color);
-
-    let prevStreak = 0;
-    let prevC = currentColumn;
-    let prevR = currentRow - 1;
-    if (prevR < 0) {
-        prevC = currentColumn - 1;
-        prevR = 29;
-    }
-    
-    const prevCell = getCell(prevC, prevR);
-    if (prevCell && prevCell.c === color) {
-        prevStreak = prevCell.s;
-    }
-
-    setCell(currentColumn, currentRow, color, prevStreak + 1);
-    
-    if (!silent) requestDraw();
-}
-
-function connectDerivWS() {
-    ws = new WebSocket(DERIV_WS);
-    ws.onopen = () => {
-        statusEl.innerText = "AUTH...";
-        ws.send(JSON.stringify({authorize: TOKEN}));
-    };
-    ws.onmessage = (msg) => {
-        const data = JSON.parse(msg.data);
-        if (data.authorize) {
-            statusEl.innerText = "LIVE (BTC)";
-            statusEl.style.borderColor = "var(--green)";
-            statusEl.style.color = "var(--green)";
-            ws.send(JSON.stringify({ticks: SYMBOL, subscribe: 1}));
-        }
-        if (data.tick) handleTick(data.tick, false);
-    };
-    ws.onclose = () => setTimeout(connectDerivWS, 3000);
-}
-
-let frameRequested = false;
-let panelCache = { streak: '', index: '', reversal: '' };
-let activeReversalData = {};
-let pulsingRows = new Set();
-let frameCount = 0;
-let lastFpsTime = performance.now();
-let lastDrawTime = 0;
-let drawTimeMs = 0;
-let CELL_W = 36; 
-let CELL_H = 12;
-let FONT_SIZE_M = 12; 
-const MARGIN_BOTTOM = 42;
-const streakStrings = Array.from({length: 200}, (_, i) => 'x' + i);
-const rowStrings = Array.from({length: 30}, (_, i) => String(i));
-const noPad = (n) => n < 200 ? streakStrings[n] : 'x' + n;
-const timePad = (n) => n < 10 ? '0' + n : String(n);
-
-function updatePerfStats() {
-    if (!perfVisible) return;
-    const now = performance.now();
-    frameCount++;
-    if (now - lastFpsTime >= 1000) {
-        document.getElementById('fps').innerText = frameCount;
-        frameCount = 0;
-        lastFpsTime = now;
-    }
-    document.getElementById('drawTime').innerText = drawTimeMs.toFixed(2);
-    document.getElementById('cellCount').innerText = currentColumn * TOTAL_ROWS;
-    if (performance.memory) {
-        document.getElementById('memUsage').innerText = (performance.memory.usedJSHeapSize / 1024).toFixed(0);
-    }
-}
-
-function requestDraw() {
-    if (!frameRequested) {
-        frameRequested = true;
-        requestAnimationFrame(() => {
-            const start = performance.now();
-            draw();
-            drawTimeMs = performance.now() - start;
-            updatePerfStats();
-            frameRequested = false;
-        });
-    }
-}
-
-function resize() {
-    const dpr = window.devicePixelRatio || 1;
-    const chartContainer = document.getElementById('chartContainer');
-    const availableH = window.innerHeight - 40; 
-    const gridH = availableH - MARGIN_BOTTOM;
-    CELL_H = gridH / TOTAL_ROWS;
-    FONT_SIZE_M = Math.max(11, Math.floor(CELL_H * 0.85));
-    CELL_W = Math.max(36, FONT_SIZE_M * 2.8);
-    const w = chartContainer.clientWidth;
-    const h = chartContainer.clientHeight;
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    canvas.style.width = w + 'px';
-    canvas.style.height = h + 'px';
-    ctx.scale(dpr, dpr);
-    updatePanels();
-    draw();
-}
-
-function draw() {
-    const w = document.getElementById('chartContainer').clientWidth;
-    const h = document.getElementById('chartContainer').clientHeight;
-    ctx.fillStyle = "var(--bg)";
-    ctx.fillRect(0, 0, w, h);
-    
-    const endCol = currentColumn + 2; 
-    const visibleCols = Math.floor(w / CELL_W);
-    const startCol = Math.max(0, endCol - visibleCols + 1); 
-    
-    ctx.save();
-    ctx.translate(-(startCol * CELL_W), 0);
-    
-    ctx.beginPath();
-    ctx.strokeStyle = "var(--grid)";
-    ctx.lineWidth = 0.5;
-    const minX = startCol * CELL_W;
-    const maxX = (endCol + 5) * CELL_W;
-    for (let r = 0; r <= TOTAL_ROWS; r++) {
-        const y = r * CELL_H;
-        ctx.moveTo(minX, y);
-        ctx.lineTo(maxX, y);
-    }
-    ctx.stroke();
-
-    ctx.font = `900 ${FONT_SIZE_M}px Consolas,monospace`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const blinkVisible = Date.now() % 400 < 200;
-
-    for (let col = startCol; col <= endCol; col++) {
-        const x = col * CELL_W;
-        if (col === currentColumn) {
-            ctx.fillStyle = '#111';
-            ctx.fillRect(x, 0, CELL_W, TOTAL_ROWS * CELL_H);
-        }
-        for (let row = 0; row < TOTAL_ROWS; row++) {
-            const cell = getCell(col, row);
-            if (!cell) continue;
-            const isLatest = (col === currentColumn && row === currentRow);
-            if (!isLatest || blinkVisible) {
-                ctx.fillStyle = cell.c === 'G' ? "var(--green)" : "var(--red)";
-                ctx.fillText(noPad(cell.s), x + CELL_W / 2, (row * CELL_H) + (CELL_H / 2) + 1);
-            }
-        }
-        if (col % 10 === 0) {
-            const totalSec = col * 30;
-            const dayIndex = Math.floor(totalSec / 86400);
-            const remainder = totalSec % 86400;
-            const hrs = Math.floor(remainder / 3600);
-            const mins = Math.floor((remainder % 3600) / 60);
-            let dayStr = "---";
-            if (dayIndex < 5) dayStr = ["MON", "TUE", "WED", "THU", "FRI"][dayIndex];
-            else if(dayIndex === 6) dayStr = "SUN";
-            ctx.fillStyle = "var(--meta)";
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-            ctx.font = '700 10px Consolas,monospace';
-            ctx.fillText(dayStr, x + CELL_W / 2, (TOTAL_ROWS * CELL_H) + 8); 
-            ctx.font = '700 9px Consolas,monospace';
-            ctx.fillText(`${timePad(hrs)}:${timePad(mins)}`, x + CELL_W / 2, (TOTAL_ROWS * CELL_H) + 24);
-        }
-    }
-    ctx.restore();
-}
-
-function updatePanels() {
-    updateStreakPanel();
-    updateReversalPanel();
-}
-
-function detectPulsingRows() {
-    pulsingRows.clear();
-    const all = [];
-    for (let r = 0; r < TOTAL_ROWS; r++) {
-        const rS = {}, gS = {};
-        for (let c = 0; c < currentColumn; c++) {
-            const cell = getCell(c, r);
-            if (cell) {
-                if (cell.c === 'R') (rS[cell.s] = rS[cell.s] || []).push(c);
-                else (gS[cell.s] = gS[cell.s] || []).push(c);
-            }
-        }
-        for (let s in rS) all.push({row: r, streak: parseInt(s), c: 'R', sc: parseInt(s) * (100 / rS[s].length)});
-        for (let s in gS) all.push({row: r, streak: parseInt(s), c: 'G', sc: parseInt(s) * (100 / gS[s].length)});
-    }
-    all.sort((a, b) => b.sc - a.sc);
-    const top = all.slice(0, 10);
-    for (let p of top) {
-        const cell = getCell(currentColumn, p.row);
-        if (cell && cell.c === p.c && cell.s >= p.streak - 1) pulsingRows.add(p.row);
-    }
-}
-
-function updateStreakPanel() {
-    const parts = [];
-    const iParts = [];
-    for (let r = 0; r < TOTAL_ROWS; r++) {
-        let rM = 0, gM = 0;
-        for (let c = 0; c < currentColumn; c++) {
-            const cell = getCell(c, r);
-            if (cell) {
-                if (cell.c === 'R') rM = Math.max(rM, cell.s);
-                else gM = Math.max(gM, cell.s);
-            }
-        }
-        const h = CELL_H;
-        parts.push(`<div class="streak-row" data-row="${r}" style="height:${h}px"><div class="streak-col red-side">${rM ? noPad(rM) : '--'}</div><div class="streak-col green-side">${gM ? noPad(gM) : '--'}</div></div>`);
-        iParts.push(`<div class="index-cell" style="height:${h}px">${rowStrings[r]}</div>`);
-    }
-    const newStreak = parts.join('');
-    const newIndex = iParts.join('');
-    if (newStreak !== panelCache.streak) {
-        document.getElementById('streakPanel').innerHTML = newStreak;
-        panelCache.streak = newStreak;
-    }
-    detectPulsingRows();
-    if (newIndex !== panelCache.index) {
-        document.getElementById('indexPanel').innerHTML = newIndex;
-        panelCache.index = newIndex;
-    }
-    const ip = document.getElementById('indexPanel');
-    pulsingRows.forEach(rn => {
-        if (ip.children[rn]) ip.children[rn].classList.add('pulsing');
-    });
-}
-
-function updateReversalPanel() {
-    const rMap = {}, gMap = {};
-    for (let r = 0; r < TOTAL_ROWS; r++) {
-        const rS = {}, gS = {};
-        for (let c = 0; c < currentColumn; c++) {
-            const cell = getCell(c, r);
-            if (cell) {
-                if (cell.c === 'R') (rS[cell.s] || (rS[cell.s] = [])).push(c);
-                else (gS[cell.s] || (gS[cell.s] = [])).push(c);
-            }
-        }
-        const rK = Object.keys(rS).map(Number).sort((a, b) => b - a);
-        if (rK.length) {
-            const s = rK[0], f = rS[s].length, k = `X${s}-${f}`;
-            if (!rMap[k]) rMap[k] = {s, f, rows: [], sc: s * (100 / f)};
-            rMap[k].rows.push({row: r});
-        }
-        const gK = Object.keys(gS).map(Number).sort((a, b) => b - a);
-        if (gK.length) {
-            const s = gK[0], f = gS[s].length, k = `X${s}-${f}`;
-            if (!gMap[k]) gMap[k] = {s, f, rows: [], sc: s * (100 / f)};
-            gMap[k].rows.push({row: r});
-        }
-    }
-    const rA = Object.values(rMap).sort((a, b) => b.sc - a.sc);
-    const gA = Object.values(gMap).sort((a, b) => b.sc - a.sc);
-    activeReversalData = {};
-    const max = Math.max(rA.length, gA.length, 1);
-    const parts = [];
-    for (let i = 0; i < max; i++) {
-        const rD = rA[i], gD = gA[i];
-        const h = CELL_H;
-        parts.push(`<div class="reversal-row" style="height:${h}px">`);
-        if (rD) {
-            const t = `X${rD.s}-${rD.f}`;
-            const k = `R_${i}`;
-            activeReversalData[k] = {rows: rD.rows, title: t};
-            parts.push(`<div class="reversal-col red-side" data-key="${k}" data-type="red">${t}</div>`);
-        } else parts.push('<div class="reversal-col red-side">--</div>');
-        if (gD) {
-            const t = `X${gD.s}-${gD.f}`;
-            const k = `G_${i}`;
-            activeReversalData[k] = {rows: gD.rows, title: t};
-            parts.push(`<div class="reversal-col green-side" data-key="${k}" data-type="green">${t}</div>`);
-        } else parts.push('<div class="reversal-col green-side">--</div>');
-        parts.push('</div>');
-    }
-    const newReversal = parts.join('');
-    if (newReversal !== panelCache.reversal) {
-        document.getElementById('reversalPanel').innerHTML = newReversal;
-        panelCache.reversal = newReversal;
-    }
-}
-
-window.openModal = function(sec) {
-    document.getElementById('modalTitle').innerText = `${rowStrings[sec]} ANOMALY HISTORY`;
-    document.getElementById('modalTitle').style.color = 'var(--red)';
-    document.getElementById('modal').style.border = '1px solid var(--red)';
-    document.getElementById('modalDualContent').style.display = 'flex';
-    document.getElementById('modalSingleContent').style.display = 'none';
-    const rS = [], gS = [];
-    for (let c = 0; c < currentColumn; c++) {
-        const cell = getCell(c, sec);
-        if (cell) {
-            if (cell.c === 'R') rS.push(cell.s);
-            else gS.push(cell.s);
-        }
-    }
-    const getSum = (arr) => {
-        const counts = {};
-        arr.forEach(s => counts[s] = (counts[s] || 0) + 1);
-        return Object.keys(counts).map(s => ({s: parseInt(s), c: counts[s]})).sort((a, b) => b.s - a.s);
-    };
-    document.getElementById('rD').innerHTML = getSum(rS).map(i => 
-        `<div class="modal-item" style="color:var(--red);border-bottom:1px solid var(--grid)">${noPad(i.s)} <span style="color:var(--red);font-size:14px">(${i.c})</span></div>`
-    ).join('');
-    document.getElementById('gD').innerHTML = getSum(gS).map(i => 
-        `<div class="modal-item" style="color:var(--green);border-bottom:1px solid var(--grid)">${noPad(i.s)} <span style="color:var(--green);font-size:14px">(${i.c})</span></div>`
-    ).join('');
-    document.getElementById('modal').classList.add('show');
-    document.getElementById('modalOverlay').classList.add('show');
-}
-
-window.openReversalModal = function(t, rows, c) {
-    const col = c === 'red' ? 'var(--red)' : 'var(--green)';
-    document.getElementById('modalTitle').innerText = `${c.toUpperCase()} ${t}`;
-    document.getElementById('modalTitle').style.color = col;
-    document.getElementById('modal').style.border = `1px solid ${col}`;
-    document.getElementById('modalDualContent').style.display = 'none';
-    document.getElementById('modalSingleContent').style.display = 'flex';
-    document.getElementById('modalSingleContent').style.border = `1px solid ${col}`;
-    document.getElementById('modalSingleContent').innerHTML = rows.length ? 
-        rows.map(r => `<div style="color:${col};border:1px solid ${col}">${rowStrings[r.row]}</div>`).join('') : 
-        `<div style="padding:20px;text-align:center;color:${col}">No data</div>`;
-    document.getElementById('modal').classList.add('show');
-    document.getElementById('modalOverlay').classList.add('show');
-}
-
-document.getElementById('streakPanel').addEventListener('click', e => {
-    const el = e.target.closest('.streak-row');
-    if (el) window.openModal(parseInt(el.getAttribute('data-row')));
 });
-
-document.getElementById('reversalPanel').addEventListener('click', e => {
-    const el = e.target.closest('.reversal-col[data-key]');
-    if (el) {
-        const d = activeReversalData[el.getAttribute('data-key')];
-        if (d) window.openReversalModal(d.title, d.rows, el.getAttribute('data-type'));
-    }
+Object.keys(redStreaks).forEach(streakKey=>{
+const streak=parseInt(streakKey);
+const freq=redStreaks[streakKey].length;
+const score=streak*(100/freq);
+const lastCol=Math.max(...redStreaks[streakKey]);
+allPatterns.push({row,streak,freq,score,color:'R',lastCol});
 });
+Object.keys(greenStreaks).forEach(streakKey=>{
+const streak=parseInt(streakKey);
+const freq=greenStreaks[streakKey].length;
+const score=streak*(100/freq);
+const lastCol=Math.max(...greenStreaks[streakKey]);
+allPatterns.push({row,streak,freq,score,color:'G',lastCol});
+});
+}
+allPatterns.sort((a,b)=>b.score-a.score);
+const top10=allPatterns.slice(0,10);
+const allCols=Object.keys(matrixData).map(Number);
+const currentCol=allCols.length>0?Math.max(...allCols):-1;
+top10.forEach(pattern=>{
+if(currentCol<0)return;
+const currentRowData=matrixData[currentCol]?matrixData[currentCol][pattern.row]:null;
+if(currentRowData){
+const oppositeColor=pattern.color==='R'?'G':'R';
+if(currentRowData.c===oppositeColor && currentRowData.s>=pattern.streak-2){
+pulsingRows.add(pattern.row);
+}
+if(currentRowData.c===pattern.color && 
+currentRowData.s>=pattern.streak-1 && 
+currentRowData.s<=pattern.streak+1){
+pulsingRows.add(pattern.row);
+}
+}
+});
+}
 
-setInterval(() => { 
-    updatePanels();
-    const now = new Date();
-    clockEl.innerText = now.toISOString().split('T')[1].split('.')[0] + " UTC";
-}, 1000);
+function updateStreakPanel(){
+const panel=document.getElementById('streakPanel');
+const indexPanel=document.getElementById('indexPanel');
+let html='';
+let indexHtml='';
+for(let s=0;s<TOTAL_ROWS;s++){
+let rM=0,gM=0;
+Object.values(matrixData).forEach(m=>{
+if(m[s]){
+if(m[s].c==='R')rM=Math.max(rM,m[s].s);
+else gM=Math.max(gM,m[s].s);
+}
+});
+html+=`<div class="streak-row" onclick="window.openModal(${s})" style="position:absolute;top:${s*CELL_H}px;height:${CELL_H}px">
+<div class="streak-col red-side">${rM?'x'+pad(rM,2):'--'}</div>
+<div class="streak-col green-side">${gM?'x'+pad(gM,2):'--'}</div>
+</div>`;
+indexHtml+=`<div class="index-cell" style="top:${s*CELL_H}px;height:${CELL_H}px">${pad(s,2)}</div>`;
+}
+panel.innerHTML=html;
+indexPanel.innerHTML=indexHtml;
+detectPulsingRows();
+pulsingRows.forEach(rowNum=>{
+const cells=indexPanel.querySelectorAll('.index-cell');
+if(cells[rowNum]){
+cells[rowNum].classList.add('pulsing');
+}
+});
+}
 
-window.onresize = resize;
+function updateReversalPanel(){
+const panel=document.getElementById('reversalPanel');
+let redMap={};
+let greenMap={};
+for(let row=0;row<TOTAL_ROWS;row++){
+let redStreaks={};
+let greenStreaks={};
+Object.keys(matrixData).forEach(colKey=>{
+const col=parseInt(colKey);
+if(matrixData[col][row]){
+const data=matrixData[col][row];
+if(data.c==='R'){
+if(!redStreaks[data.s])redStreaks[data.s]=[];
+redStreaks[data.s].push(col);
+}else{
+if(!greenStreaks[data.s])greenStreaks[data.s]=[];
+greenStreaks[data.s].push(col);
+}
+}
+});
+const redStreakNums=Object.keys(redStreaks).map(Number).sort((a,b)=>{
+if(b!==a)return b-a;
+return redStreaks[a].length-redStreaks[b].length;
+});
+if(redStreakNums.length>0){
+const bestStreak=redStreakNums[0];
+const positions=redStreaks[bestStreak];
+const freq=positions.length;
+const lastCol=Math.max(...positions);
+const key=`X${pad(bestStreak,2)}-${pad(freq,2)}T`;
+if(!redMap[key])redMap[key]={streak:bestStreak,freq:freq,rows:[],score:bestStreak*(100/freq)};
+redMap[key].rows.push({row:row,lastCol:lastCol});
+}
+const greenStreakNums=Object.keys(greenStreaks).map(Number).sort((a,b)=>{
+if(b!==a)return b-a;
+return greenStreaks[a].length-greenStreaks[b].length;
+});
+if(greenStreakNums.length>0){
+const bestStreak=greenStreakNums[0];
+const positions=greenStreaks[bestStreak];
+const freq=positions.length;
+const lastCol=Math.max(...positions);
+const key=`X${pad(bestStreak,2)}-${pad(freq,2)}T`;
+if(!greenMap[key])greenMap[key]={streak:bestStreak,freq:freq,rows:[],score:bestStreak*(100/freq)};
+greenMap[key].rows.push({row:row,lastCol:lastCol});
+}
+}
+const redEntries=Object.keys(redMap).map(key=>({key,data:redMap[key]})).sort((a,b)=>b.data.score-a.data.score);
+const greenEntries=Object.keys(greenMap).map(key=>({key,data:greenMap[key]})).sort((a,b)=>b.data.score-a.data.score);
+const maxRows=Math.max(redEntries.length,greenEntries.length,1);
+let html='';
+for(let i=0;i<maxRows;i++){
+const redEntry=redEntries[i];
+const greenEntry=greenEntries[i];
+html+=`<div class="reversal-row" style="position:absolute;top:${i*CELL_H}px;height:${CELL_H}px">`;
+if(redEntry){
+const redData=JSON.stringify(redEntry.data.rows).replace(/"/g,'&quot;');
+const displayKey=`X${pad(redEntry.data.streak,2)}-${pad(redEntry.data.freq,2)}T`;
+html+=`<div class="reversal-col red-side" onclick="window.openReversalModal('${displayKey}',${redData},'red')">${displayKey}</div>`;
+}else{
+html+='<div class="reversal-col red-side">--</div>';
+}
+if(greenEntry){
+const greenData=JSON.stringify(greenEntry.data.rows).replace(/"/g,'&quot;');
+const displayKey=`X${pad(greenEntry.data.streak,2)}-${pad(greenEntry.data.freq,2)}T`;
+html+=`<div class="reversal-col green-side" onclick="window.openReversalModal('${displayKey}',${greenData},'green')">${displayKey}</div>`;
+}else{
+html+='<div class="reversal-col green-side">--</div>';
+}
+html+='</div>';
+}
+panel.innerHTML=html;
+}
+
+function draw(){
+const width=window.innerWidth;
+const height=window.innerHeight-42;
+ctx.fillStyle='#ffffff';
+ctx.fillRect(0,0,width,height);
+const now=new Date();
+const startOfWeekUTC=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()-(now.getUTCDay()===0?6:now.getUTCDay()-1),0,0,0));
+ctx.save();
+ctx.translate(MARGIN_LEFT-cameraX,0);
+let startCol=Math.max(0,Math.floor(cameraX/CELL_W));
+let endCol=Math.min(MAX_COLS-1,Math.floor((cameraX+width)/CELL_W)+1);
+const beforeLiveColIndex=currentColumn>0?currentColumn-1:-1;
+for(let a=startCol;a<=endCol;a++){
+let x=a*CELL_W;
+if(matrixData[a]){
+let beforeLiveMaxStreak=0;
+if(a===beforeLiveColIndex){
+Object.values(matrixData[a]).forEach(d=>{
+if(d.s>1&&d.s>beforeLiveMaxStreak)beforeLiveMaxStreak=d.s;
+});
+}
+for(let s in matrixData[a]){
+const d=matrixData[a][s];
+const isBeforeLivePulsing=(a===beforeLiveColIndex&&d.s===beforeLiveMaxStreak&&d.s>1);
+const scale=isBeforeLivePulsing?(1.0+(0.18*Math.abs(Math.sin(Date.now()/200)))):1;
+if(isBeforeLivePulsing){
+ctx.save();
+ctx.translate(x+CELL_W/2,(s*CELL_H)+CELL_H/2);
+ctx.scale(scale,scale);
+ctx.translate(-(x+CELL_W/2),-((s*CELL_H)+CELL_H/2));
+}
+ctx.fillStyle=d.c==='G'?'#10b981':'#ef4444';
+ctx.font='700 9px ui-monospace,monospace';
+ctx.textAlign='center';
+ctx.textBaseline='middle';
+ctx.fillText('x'+d.s,x+CELL_W/2,s*CELL_H+CELL_H/2);
+if(isBeforeLivePulsing)ctx.restore();
+}
+}
+ctx.fillStyle='#1f2937';
+ctx.textAlign='center';
+ctx.textBaseline='top';
+ctx.font='700 7px ui-monospace,monospace';
+const mcmPosition=a%MAX_COLS;
+ctx.fillText(pad(mcmPosition,5),x+CELL_W/2,TOTAL_ROWS*CELL_H+2);
+const colTimestamp=startOfWeekUTC.getTime()+(a*30000);
+const localDate=new Date(colTimestamp);
+ctx.font='500 6px ui-monospace,monospace';
+ctx.fillStyle='#6b7280';
+ctx.fillText(`${pad(localDate.getHours())}:${pad(localDate.getMinutes())}`,x+CELL_W/2,TOTAL_ROWS*CELL_H+11);
+}
+ctx.restore();
+ctx.save();
+for(let row=0;row<TOTAL_ROWS;row++){
+const y=row*CELL_H;
+ctx.fillStyle='#1f2937';
+ctx.font='700 8px ui-monospace,monospace';
+ctx.textAlign='center';
+ctx.textBaseline='middle';
+ctx.fillText(pad(row,2),MARGIN_LEFT/2,y+CELL_H/2);
+}
+ctx.restore();
+requestAnimationFrame(draw);
+}
+
+// Window Event Listeners & Interactions
+canvas.addEventListener('mousedown',e=>{
+isDragging=true;
+lastMouseX=e.clientX;
+isFollowing=false;
+document.getElementById('followBtn').classList.remove('active');
+});
+window.addEventListener('mousemove',e=>{
+if(isDragging){
+cameraX-=(e.clientX-lastMouseX);
+cameraX=Math.max(0,Math.min(cameraX,(MAX_COLS*CELL_W)-(window.innerWidth-MARGIN_RIGHT-MARGIN_LEFT)));
+lastMouseX=e.clientX;
+}
+});
+window.addEventListener('mouseup',()=>isDragging=false);
+let lastTouchX=0;
+canvas.addEventListener('touchstart',e=>{
+isDragging=true;
+lastTouchX=e.touches[0].clientX;
+isFollowing=false;
+document.getElementById('followBtn').classList.remove('active');
+e.preventDefault();
+},{passive:false});
+canvas.addEventListener('touchmove',e=>{
+if(isDragging&&e.touches.length>0){
+const touchX=e.touches[0].clientX;
+cameraX-=(touchX-lastTouchX);
+cameraX=Math.max(0,Math.min(cameraX,(MAX_COLS*CELL_W)-(window.innerWidth-MARGIN_RIGHT-MARGIN_LEFT)));
+lastTouchX=touchX;
+}
+e.preventDefault();
+},{passive:false});
+canvas.addEventListener('touchend',()=>{isDragging=false;});
+canvas.addEventListener('touchcancel',()=>{isDragging=false;});
+
+window.closeModal = function(){
+document.getElementById('modal').classList.remove('show');
+document.getElementById('modalOverlay').classList.remove('show');
+}
+
+window.openModal = function(sec){
+document.getElementById('modalTitle').innerText=`${pad(sec,2)} ANOMALY HISTORY`;
+document.getElementById('modalTitle').style.color='var(--text)';
+document.getElementById('modalDualContent').style.display='flex';
+document.getElementById('modalSingleContent').style.display='none';
+let rS=[],gS=[];
+Object.keys(matrixData).forEach(m=>{
+if(matrixData[m][sec]){
+const d=matrixData[m][sec];
+(d.c==='R'?rS:gS).push(d.s);
+}
+});
+const getSum=(arr)=>{
+const counts={};
+arr.forEach(s=>counts[s]=(counts[s]||0)+1);
+return Object.keys(counts).map(s=>({s:parseInt(s),c:counts[s]})).sort((a,b)=>b.s-a.s);
+};
+document.getElementById('rD').innerHTML=getSum(rS).map(i=>`<div style="padding:5px;border-bottom:1px solid var(--grid);text-align:center;color:var(--red)">X${pad(i.s,2)} (${i.c})</div>`).join('');
+document.getElementById('gD').innerHTML=getSum(gS).map(i=>`<div style="padding:5px;border-bottom:1px solid var(--grid);text-align:center;color:var(--green)">X${pad(i.s,2)} (${i.c})</div>`).join('');
+document.getElementById('modal').classList.add('show');
+document.getElementById('modalOverlay').classList.add('show');
+}
+
+window.openReversalModal = function(key,rows,color){
+const colorVar = color === 'red' ? 'var(--red)' : 'var(--green)';
+document.getElementById('modalTitle').innerText=`${color.toUpperCase()} ${key}`;
+document.getElementById('modalTitle').style.color=colorVar;
+document.getElementById('modalDualContent').style.display='none';
+document.getElementById('modalSingleContent').style.display='flex';
+let contentHTML='';
+if(rows&&rows.length>0){
+rows.forEach(r=>{
+contentHTML+=`<div style="color:var(--text)">${pad(r.row,2)}</div>`;
+});
+}else{
+contentHTML='<div style="padding:20px;text-align:center;color:var(--text-muted);width:100%">No data</div>';
+}
+document.getElementById('modalSingleContent').innerHTML=contentHTML;
+document.getElementById('modal').classList.add('show');
+document.getElementById('modalOverlay').classList.add('show');
+}
+
+document.getElementById('followBtn').onclick=function(){
+isFollowing=!isFollowing;
+this.classList.toggle('active',isFollowing);
+if(isFollowing)jumpToCurrent();
+};
+
+window.onresize=resize;
 
 (async function init() {
     await loadFirebaseData();
     resize();
     connectDerivWS();
-    setInterval(() => requestDraw(), 250);
+    draw();
 })();
 </script>
 </body>
