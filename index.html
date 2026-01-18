@@ -267,12 +267,11 @@ canvas {
 
 <script type="module">
 // ============================================================================
-// FIREBASE INTEGRATION (The Cloud Connection)
+// FIREBASE INTEGRATION
 // ============================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-// Your Provided Config
 const firebaseConfig = {
   apiKey: "AIzaSyDrvNy94Jhq8RmYM7jgfckrxneCetVkYw4",
   authDomain: "mcm30-db-fe9da.firebaseapp.com",
@@ -324,7 +323,7 @@ let audioCtx = null;
 let perfVisible = false;
 
 // ============================================================================
-// EXPORTED FUNCTIONS (Attached to Window for HTML access)
+// EXPORTED FUNCTIONS
 // ============================================================================
 window.initAudio = function() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -342,7 +341,7 @@ window.closeModal = function() {
 }
 
 // ============================================================================
-// CLOUD DATA LOADER (REPLACES INDEXEDDB)
+// CLOUD DATA LOADER
 // ============================================================================
 async function loadFirebaseData() {
     statusEl.innerText = "LOADING DB...";
@@ -370,7 +369,8 @@ async function loadFirebaseData() {
                 draw();
             }
         } else {
-            console.log("[CLOUD] No history found (Database is empty).");
+            console.log("[CLOUD] No history found (Fresh DB).");
+            // If empty, we just wait for live ticks
             statusEl.innerText = "DB EMPTY";
         }
     } catch (e) {
