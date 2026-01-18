@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>MCM(30) LIVE CLOUD</title>
+<title>MCM(30) BTC LIVE</title>
 <style>
 :root {
     --bg: #000; 
@@ -221,7 +221,7 @@ canvas {
 <body onclick="window.initAudio()">
 <div id="ui">
     <div style="display:flex;gap:12px;align-items:center">
-        <h1>MCM(30) LIVE CLOUD</h1>
+        <h1>MCM(30) BTC LIVE</h1>
         <span id="status" class="status">CONNECTING...</span>
         <span id="clock" style="color:var(--meta);font-size:11px;font-weight:700">--:--:-- UTC</span>
     </div>
@@ -266,13 +266,9 @@ canvas {
 </div>
 
 <script type="module">
-// ============================================================================
-// FIREBASE INTEGRATION (The Cloud Connection)
-// ============================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-// Your Provided Config
 const firebaseConfig = {
   apiKey: "AIzaSyDrvNy94Jhq8RmYM7jgfckrxneCetVkYw4",
   authDomain: "mcm30-db-fe9da.firebaseapp.com",
@@ -283,34 +279,24 @@ const firebaseConfig = {
   appId: "1:34034835036:web:3e5dcd7e6b5c2c21e15099"
 };
 
-// Initialize
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// ============================================================================
-// GLOBAL STATE & CORE
-// ============================================================================
 const canvas = document.getElementById('matrixCanvas');
-const ctx = canvas.getContext('2d', {
-    alpha: false,
-    desynchronized: true,
-    willReadFrequently: false
-});
-
+const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
 const statusEl = document.getElementById('status');
 const clockEl = document.getElementById('clock');
 const DERIV_WS = "wss://ws.derivws.com/websockets/v3?app_id=1089";
 const TOKEN = "TpVIBWpqet5X8AH";
-const SYMBOL = "frxEURUSD";
+
+// CHANGED TO BITCOIN FOR LIVE TESTING
+const SYMBOL = "cryBTCUSD";
 
 const TOTAL_ROWS = 30;
 const MAX_COLS = 14400;
 const MATRIX_SIZE = MAX_COLS * TOTAL_ROWS;
 
-// Binary Matrix
 let matrixBinary = new Uint16Array(MATRIX_SIZE);
-
-// Tick History
 const MAX_TICK_HISTORY = 1000;
 const tickPrices = new Float64Array(MAX_TICK_HISTORY);
 const tickTimestamps = new Float64Array(MAX_TICK_HISTORY);
@@ -323,9 +309,6 @@ let currentRow = 0;
 let audioCtx = null;
 let perfVisible = false;
 
-// ============================================================================
-// EXPORTED FUNCTIONS (Attached to Window for HTML access)
-// ============================================================================
 window.initAudio = function() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
@@ -341,37 +324,27 @@ window.closeModal = function() {
     document.getElementById('modalOverlay').classList.remove('show');
 }
 
-// ============================================================================
-// CLOUD DATA LOADER (REPLACES INDEXEDDB)
-// ============================================================================
 async function loadFirebaseData() {
     statusEl.innerText = "LOADING DB...";
     statusEl.style.color = "#FE0";
     statusEl.style.borderColor = "#FE0";
-    
     try {
         const snapshot = await get(ref(db, 'tick_history'));
         if (snapshot.exists()) {
             const data = snapshot.val();
+            // Note: DB likely has EURUSD data. Loading it into BTC live chart 
+            // will cause a jump, but it verifies connection.
             if (data.prices && data.times) {
                 console.log(`[CLOUD] Loaded ${data.prices.length} ticks`);
-                
-                // Replay history silently to rebuild matrix
                 for(let i = 0; i < data.prices.length; i++) {
-                    const t = { 
-                        quote: data.prices[i], 
-                        epoch: data.times[i]
-                    };
-                    handleTick(t, true); // true = silent mode
+                    const t = { quote: data.prices[i], epoch: data.times[i] };
+                    handleTick(t, true); 
                 }
-                
                 statusEl.innerText = "DB SYNCED";
                 updatePanels();
                 draw();
             }
         } else {
-            console.log("[CLOUD] No history found (Fresh DB).");
-            // If empty, we just wait for live ticks
             statusEl.innerText = "DB EMPTY";
         }
     } catch (e) {
@@ -380,9 +353,6 @@ async function loadFirebaseData() {
     }
 }
 
-// ============================================================================
-// CORE LOGIC
-// ============================================================================
 function packCell(color, streak) {
     const colorBit = color === 'G' ? 1 : 0;
     return (colorBit << 15) | (streak & 0x7FFF);
@@ -405,20 +375,24 @@ function getCell(col, row) {
     return unpackCell(packed);
 }
 
-function getWeekInfo() {
-    const now = new Date();
-    const day = now.getUTCDay();
-    let normalizedDay = day - 1;
-    if (normalizedDay < 0) normalizedDay = 6;
-    const isWeekend = normalizedDay >= 5;
+// WEEKEND CHECK REMOVED
+function getWeekInfo(timeInput = null) {
+    const now = timeInput ? new Date(timeInput * 1000) : new Date();
+    // Simplified: Just calculate based on seconds since Monday 00:00 equivalent
+    // This allows it to run on Sunday without blocking
+    const day = now.getUTCDay(); // 0=Sun, 1=Mon...
+    
+    // Force Sunday to be treated as Day 6 (end of week) instead of 0 for linear plotting
+    let normalizedDay = day === 0 ? 6 : day - 1; 
+    
     const h = now.getUTCHours();
     const m = now.getUTCMinutes();
     const s = now.getUTCSeconds();
-    const effectiveDay = isWeekend ? 0 : normalizedDay; 
-    const totalSeconds = (effectiveDay * 86400) + (h * 3600) + (m * 60) + s;
+    
+    const totalSeconds = (normalizedDay * 86400) + (h * 3600) + (m * 60) + s;
     const col = Math.floor(totalSeconds / 30);
     const row = totalSeconds % 30;
-    return { col, row, isWeekend };
+    return { col, row };
 }
 
 function playTone(type) {
@@ -435,39 +409,28 @@ function playTone(type) {
     osc.stop(audioCtx.currentTime + 0.1);
 }
 
-// ============================================================================
-// TICK HANDLER
-// ============================================================================
 function handleTick(tick, silent = false) {
     const price = tick.quote;
     const MCM_LOOKBACK = 30;
 
-    // Store Tick
     tickPrices[tickIndex] = price;
     tickTimestamps[tickIndex] = tick.epoch * 1000;
     tickIndex = (tickIndex + 1) % MAX_TICK_HISTORY;
     if (tickCount < MAX_TICK_HISTORY) tickCount++;
 
-    const info = getWeekInfo();
+    const info = getWeekInfo(tick.epoch);
     
-    if (info.isWeekend && !silent) {
-        statusEl.innerText = "MARKET CLOSED";
-        statusEl.style.color = "var(--meta)";
-        statusEl.style.borderColor = "var(--meta)";
-        return;
-    }
+    // REMOVED WEEKEND BLOCKING LOGIC
     
     currentColumn = info.col;
     currentRow = info.row;
     
     if (currentColumn >= MAX_COLS) return;
 
-    // Color Logic
     let color = 'G';
     if (tickCount >= MCM_LOOKBACK + 1) {
         const oldIdx = (tickIndex - MCM_LOOKBACK - 1 + MAX_TICK_HISTORY) % MAX_TICK_HISTORY;
         const old = tickPrices[oldIdx];
-        
         if (price > old) color = 'G';
         else if (price < old) color = 'R';
         else {
@@ -484,11 +447,9 @@ function handleTick(tick, silent = false) {
     
     if (!silent) playTone(color);
 
-    // Streak Logic
     let prevStreak = 0;
     let prevC = currentColumn;
     let prevR = currentRow - 1;
-    
     if (prevR < 0) {
         prevC = currentColumn - 1;
         prevR = 29;
@@ -501,38 +462,28 @@ function handleTick(tick, silent = false) {
 
     setCell(currentColumn, currentRow, color, prevStreak + 1);
     
-    // Only update UI if live
     if (!silent) requestDraw();
 }
 
-// ============================================================================
-// WEBSOCKET
-// ============================================================================
 function connectDerivWS() {
     ws = new WebSocket(DERIV_WS);
-    
     ws.onopen = () => {
         statusEl.innerText = "AUTH...";
         ws.send(JSON.stringify({authorize: TOKEN}));
     };
-    
     ws.onmessage = (msg) => {
         const data = JSON.parse(msg.data);
         if (data.authorize) {
-            statusEl.innerText = "LIVE";
+            statusEl.innerText = "LIVE (BTC)";
             statusEl.style.borderColor = "var(--green)";
             statusEl.style.color = "var(--green)";
             ws.send(JSON.stringify({ticks: SYMBOL, subscribe: 1}));
         }
         if (data.tick) handleTick(data.tick, false);
     };
-    
     ws.onclose = () => setTimeout(connectDerivWS, 3000);
 }
 
-// ============================================================================
-// RENDERING & PANELS
-// ============================================================================
 let frameRequested = false;
 let panelCache = { streak: '', index: '', reversal: '' };
 let activeReversalData = {};
@@ -611,7 +562,6 @@ function draw() {
     ctx.save();
     ctx.translate(-(startCol * CELL_W), 0);
     
-    // Grid
     ctx.beginPath();
     ctx.strokeStyle = "var(--grid)";
     ctx.lineWidth = 0.5;
@@ -652,6 +602,7 @@ function draw() {
             const mins = Math.floor((remainder % 3600) / 60);
             let dayStr = "---";
             if (dayIndex < 5) dayStr = ["MON", "TUE", "WED", "THU", "FRI"][dayIndex];
+            else if(dayIndex === 6) dayStr = "SUN";
             ctx.fillStyle = "var(--meta)";
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
