@@ -16,10 +16,8 @@ const DERIV_WS = "wss://ws.derivws.com/websockets/v3?app_id=1089";
 const app = express();
 const port = process.env.PORT || 3000;
 
-// This is the "Trigger" URL
 app.get('/update', async (req, res) => {
     console.log("External trigger received. Starting job...");
-    
     try {
         await runDataCollection();
         res.status(200).send('Data updated successfully');
@@ -29,28 +27,26 @@ app.get('/update', async (req, res) => {
     }
 });
 
-// Default page (just to check if it's alive)
 app.get('/', (req, res) => res.send('MCM Bot is Sleeping. Hit /update to wake me.'));
 
-// Start Listening
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
 });
 
-// 3. THE LOGIC (Same as before, wrapped in a function)
+// 3. THE LOGIC (UPDATED FOR BTC)
 function runDataCollection() {
     return new Promise((resolve, reject) => {
         const ws = new WebSocket(DERIV_WS);
         
-        // Timeout safety: Fail if it takes longer than 20s
         const safetyTimeout = setTimeout(() => {
             ws.terminate();
             reject(new Error("WebSocket timeout"));
         }, 20000);
 
         ws.on('open', () => {
+            console.log("Connected to Deriv. Fetching BTCUSD...");
             ws.send(JSON.stringify({
-                ticks_history: "frxEURUSD",
+                ticks_history: "cryBTCUSD", // CHANGED TO BTC
                 adjust_start_time: 1,
                 count: 1000,
                 end: "latest",
@@ -68,7 +64,7 @@ function runDataCollection() {
                     times: msg.history.times,
                     lastUpdate: Date.now()
                 });
-                console.log("Database updated.");
+                console.log("Database updated with BTC data.");
                 ws.close();
                 resolve();
             }
