@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>MCM(30) ULTIMATE FASTEST</title>
+<title>MCM(30) LIVE CLOUD</title>
 <style>
 :root {
     --bg: #000; 
@@ -218,16 +218,16 @@ canvas {
 }
 </style>
 </head>
-<body onclick="initAudio()">
+<body onclick="window.initAudio()">
 <div id="ui">
     <div style="display:flex;gap:12px;align-items:center">
-        <h1>MCM(30) ULTIMATE FASTEST</h1>
-        <span id="status" class="status">OFFLINE</span>
+        <h1>MCM(30) LIVE CLOUD</h1>
+        <span id="status" class="status">CONNECTING...</span>
         <span id="clock" style="color:var(--meta);font-size:11px;font-weight:700">--:--:-- UTC</span>
     </div>
     <div style="display:flex;gap:8px">
-        <button onclick="togglePerf()">PERF</button>
-        <button onclick="hardReset()">RESET DB</button>
+        <button onclick="window.togglePerf()">PERF</button>
+        <button onclick="location.reload()">REFRESH</button>
     </div>
 </div>
 
@@ -249,7 +249,7 @@ canvas {
     </div>
 </div>
 
-<div id="modalOverlay" onclick="closeModal()"></div>
+<div id="modalOverlay" onclick="window.closeModal()"></div>
 <div id="modal">
     <div id="modalTitle" style="font-weight:800;font-size:14px;color:var(--red);letter-spacing:1px;text-align:center;padding-bottom:12px;border-bottom:1px solid var(--grid)"></div>
     <div id="modalSingleContent" style="display:none"></div>
@@ -265,11 +265,31 @@ canvas {
     </div>
 </div>
 
-<script>
+<script type="module">
 // ============================================================================
-// ULTIMATE FASTEST EDITION - Binary Packed + OffscreenCanvas + IndexedDB
+// FIREBASE INTEGRATION (The Cloud Connection)
 // ============================================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+// Your Provided Config
+const firebaseConfig = {
+  apiKey: "AIzaSyDrvNy94Jhq8RmYM7jgfckrxneCetVkYw4",
+  authDomain: "mcm30-db-fe9da.firebaseapp.com",
+  databaseURL: "https://mcm30-db-fe9da-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "mcm30-db-fe9da",
+  storageBucket: "mcm30-db-fe9da.firebasestorage.app",
+  messagingSenderId: "34034835036",
+  appId: "1:34034835036:web:3e5dcd7e6b5c2c21e15099"
+};
+
+// Initialize
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// ============================================================================
+// GLOBAL STATE & CORE
+// ============================================================================
 const canvas = document.getElementById('matrixCanvas');
 const ctx = canvas.getContext('2d', {
     alpha: false,
@@ -283,29 +303,92 @@ const DERIV_WS = "wss://ws.derivws.com/websockets/v3?app_id=1089";
 const TOKEN = "TpVIBWpqet5X8AH";
 const SYMBOL = "frxEURUSD";
 
-// ============================================================================
-// BINARY PACKED MATRIX - 2 bytes per cell (1 bit color + 15 bits streak)
-// ============================================================================
 const TOTAL_ROWS = 30;
 const MAX_COLS = 14400;
 const MATRIX_SIZE = MAX_COLS * TOTAL_ROWS;
 
-// Binary format: Uint16 per cell
-// Bit 15: Color (0=Red, 1=Green)
-// Bits 0-14: Streak value (0-32767)
+// Binary Matrix
 let matrixBinary = new Uint16Array(MATRIX_SIZE);
 
+// Tick History
+const MAX_TICK_HISTORY = 1000;
+const tickPrices = new Float64Array(MAX_TICK_HISTORY);
+const tickTimestamps = new Float64Array(MAX_TICK_HISTORY);
+let tickIndex = 0;
+let tickCount = 0;
+
+let ws = null;
+let currentColumn = 0;
+let currentRow = 0;
+let audioCtx = null;
+let perfVisible = false;
+
+// ============================================================================
+// EXPORTED FUNCTIONS (Attached to Window for HTML access)
+// ============================================================================
+window.initAudio = function() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+window.togglePerf = function() {
+    perfVisible = !perfVisible;
+    document.getElementById('perfStats').style.display = perfVisible ? 'block' : 'none';
+}
+
+window.closeModal = function() {
+    document.getElementById('modal').classList.remove('show');
+    document.getElementById('modalOverlay').classList.remove('show');
+}
+
+// ============================================================================
+// CLOUD DATA LOADER (REPLACES INDEXEDDB)
+// ============================================================================
+async function loadFirebaseData() {
+    statusEl.innerText = "LOADING DB...";
+    statusEl.style.color = "#FE0";
+    statusEl.style.borderColor = "#FE0";
+    
+    try {
+        const snapshot = await get(ref(db, 'tick_history'));
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            if (data.prices && data.times) {
+                console.log(`[CLOUD] Loaded ${data.prices.length} ticks`);
+                
+                // Replay history silently to rebuild matrix
+                for(let i = 0; i < data.prices.length; i++) {
+                    const t = { 
+                        quote: data.prices[i], 
+                        epoch: data.times[i]
+                    };
+                    handleTick(t, true); // true = silent mode
+                }
+                
+                statusEl.innerText = "DB SYNCED";
+                updatePanels();
+                draw();
+            }
+        } else {
+            console.log("[CLOUD] No history found (Database is empty).");
+            statusEl.innerText = "DB EMPTY";
+        }
+    } catch (e) {
+        console.error("Firebase Error:", e);
+        statusEl.innerText = "DB ERROR";
+    }
+}
+
+// ============================================================================
+// CORE LOGIC
+// ============================================================================
 function packCell(color, streak) {
-    // color: 'R'=0, 'G'=1
     const colorBit = color === 'G' ? 1 : 0;
     return (colorBit << 15) | (streak & 0x7FFF);
 }
 
 function unpackCell(packed) {
-    return {
-        c: (packed >> 15) ? 'G' : 'R',
-        s: packed & 0x7FFF
-    };
+    return { c: (packed >> 15) ? 'G' : 'R', s: packed & 0x7FFF };
 }
 
 function setCell(col, row, color, streak) {
@@ -316,88 +399,25 @@ function setCell(col, row, color, streak) {
 
 function getCell(col, row) {
     if (col < 0 || col >= MAX_COLS || row < 0 || row >= TOTAL_ROWS) return null;
-    const idx = col * TOTAL_ROWS + row;
-    const packed = matrixBinary[idx];
+    const packed = matrixBinary[col * TOTAL_ROWS + row];
     if (packed === 0) return null;
     return unpackCell(packed);
 }
 
-// ============================================================================
-// TICK HISTORY - Typed Arrays
-// ============================================================================
-const MAX_TICK_HISTORY = 500;
-const tickPrices = new Float64Array(MAX_TICK_HISTORY);
-const tickTimestamps = new Float64Array(MAX_TICK_HISTORY);
-let tickIndex = 0;
-let tickCount = 0;
-
-// ============================================================================
-// STATE
-// ============================================================================
-let ws = null;
-let currentColumn = 0;
-let currentRow = 0;
-let audioCtx = null;
-
-// ============================================================================
-// PERFORMANCE MONITORING
-// ============================================================================
-let frameCount = 0;
-let lastFpsTime = performance.now();
-let lastDrawTime = 0;
-let drawTimeMs = 0;
-let perfVisible = false;
-
-function togglePerf() {
-    perfVisible = !perfVisible;
-    document.getElementById('perfStats').style.display = perfVisible ? 'block' : 'none';
-}
-
-function updatePerfStats() {
-    if (!perfVisible) return;
-    
-    const now = performance.now();
-    frameCount++;
-    
-    if (now - lastFpsTime >= 1000) {
-        document.getElementById('fps').innerText = frameCount;
-        frameCount = 0;
-        lastFpsTime = now;
-    }
-    
-    document.getElementById('drawTime').innerText = drawTimeMs.toFixed(2);
-    document.getElementById('cellCount').innerText = currentColumn * TOTAL_ROWS;
-    
-    if (performance.memory) {
-        const mem = (performance.memory.usedJSHeapSize / 1024).toFixed(0);
-        document.getElementById('memUsage').innerText = mem;
-    }
-}
-
-// ============================================================================
-// VISUAL STATE
-// ============================================================================
-let CELL_W = 36; 
-let CELL_H = 12;
-let FONT_SIZE_M = 12; 
-const MARGIN_BOTTOM = 42;
-const MCM_LOOKBACK = 30;
-
-// String pools
-const streakStrings = Array.from({length: 200}, (_, i) => 'x' + i);
-const rowStrings = Array.from({length: 30}, (_, i) => String(i));
-
-const noPad = (n) => n < 200 ? streakStrings[n] : 'x' + n;
-const timePad = (n) => n < 10 ? '0' + n : String(n);
-
-const COL_BG = '#000', COL_RED = '#F00', COL_GREEN = '#0F0', COL_GRID = '#222', COL_META = '#888';
-
-// ============================================================================
-// AUDIO
-// ============================================================================
-function initAudio() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+function getWeekInfo() {
+    const now = new Date();
+    const day = now.getUTCDay();
+    let normalizedDay = day - 1;
+    if (normalizedDay < 0) normalizedDay = 6;
+    const isWeekend = normalizedDay >= 5;
+    const h = now.getUTCHours();
+    const m = now.getUTCMinutes();
+    const s = now.getUTCSeconds();
+    const effectiveDay = isWeekend ? 0 : normalizedDay; 
+    const totalSeconds = (effectiveDay * 86400) + (h * 3600) + (m * 60) + s;
+    const col = Math.floor(totalSeconds / 30);
+    const row = totalSeconds % 30;
+    return { col, row, isWeekend };
 }
 
 function playTone(type) {
@@ -415,64 +435,13 @@ function playTone(type) {
 }
 
 // ============================================================================
-// TIME LOGIC
+// TICK HANDLER
 // ============================================================================
-function getWeekInfo() {
-    const now = new Date();
-    const day = now.getUTCDay();
-    let normalizedDay = day - 1;
-    if (normalizedDay < 0) normalizedDay = 6;
-    const isWeekend = normalizedDay >= 5;
-    const h = now.getUTCHours();
-    const m = now.getUTCMinutes();
-    const s = now.getUTCSeconds();
-    const effectiveDay = isWeekend ? 0 : normalizedDay; 
-    const totalSeconds = (effectiveDay * 86400) + (h * 3600) + (m * 60) + s;
-    const col = Math.floor(totalSeconds / 30);
-    const row = totalSeconds % 30;
-    return { col, row, isWeekend };
-}
-
-// ============================================================================
-// WEBSOCKET
-// ============================================================================
-function connectDerivWS() {
-    ws = new WebSocket(DERIV_WS);
-    const to = setTimeout(() => {
-        if (ws.readyState !== ws.OPEN) {
-            statusEl.innerText = "DEMO";
-            statusEl.style.borderColor = COL_RED;
-            statusEl.style.color = COL_RED;
-        }
-    }, 5000);
-    
-    ws.onopen = () => {
-        clearTimeout(to);
-        statusEl.innerText = "AUTH...";
-        ws.send(JSON.stringify({authorize: TOKEN}));
-    };
-    
-    ws.onmessage = (msg) => {
-        const data = JSON.parse(msg.data);
-        if (data.authorize) {
-            statusEl.innerText = "SYNCED";
-            statusEl.style.borderColor = COL_GREEN;
-            statusEl.style.color = COL_GREEN;
-            ws.send(JSON.stringify({ticks: SYMBOL, subscribe: 1}));
-        }
-        if (data.tick) handleTick(data.tick);
-    };
-    
-    ws.onerror = (e) => console.error(e);
-    ws.onclose = () => setTimeout(connectDerivWS, 3000);
-}
-
-// ============================================================================
-// CORE TICK HANDLER - BINARY OPTIMIZED
-// ============================================================================
-function handleTick(tick) {
+function handleTick(tick, silent = false) {
     const price = tick.quote;
-    
+    const MCM_LOOKBACK = 30;
+
+    // Store Tick
     tickPrices[tickIndex] = price;
     tickTimestamps[tickIndex] = tick.epoch * 1000;
     tickIndex = (tickIndex + 1) % MAX_TICK_HISTORY;
@@ -480,10 +449,10 @@ function handleTick(tick) {
 
     const info = getWeekInfo();
     
-    if (info.isWeekend) {
+    if (info.isWeekend && !silent) {
         statusEl.innerText = "MARKET CLOSED";
-        statusEl.style.color = COL_META;
-        statusEl.style.borderColor = COL_META;
+        statusEl.style.color = "var(--meta)";
+        statusEl.style.borderColor = "var(--meta)";
         return;
     }
     
@@ -492,7 +461,7 @@ function handleTick(tick) {
     
     if (currentColumn >= MAX_COLS) return;
 
-    // Color logic
+    // Color Logic
     let color = 'G';
     if (tickCount >= MCM_LOOKBACK + 1) {
         const oldIdx = (tickIndex - MCM_LOOKBACK - 1 + MAX_TICK_HISTORY) % MAX_TICK_HISTORY;
@@ -512,9 +481,9 @@ function handleTick(tick) {
         }
     }
     
-    playTone(color);
+    if (!silent) playTone(color);
 
-    // Streak calculation
+    // Streak Logic
     let prevStreak = 0;
     let prevC = currentColumn;
     let prevR = currentRow - 1;
@@ -531,117 +500,70 @@ function handleTick(tick) {
 
     setCell(currentColumn, currentRow, color, prevStreak + 1);
     
-    // Debounced save
-    if (!window._saveScheduled) {
-        window._saveScheduled = true;
-        setTimeout(() => {
-            saveToIndexedDB();
-            window._saveScheduled = false;
-        }, 3000);
-    }
-    
-    requestDraw();
+    // Only update UI if live
+    if (!silent) requestDraw();
 }
 
 // ============================================================================
-// INDEXEDDB STORAGE - ASYNC & FAST
+// WEBSOCKET
 // ============================================================================
-let db = null;
-
-function initDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open('MCM30_DB', 1);
-        
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => {
-            db = request.result;
-            resolve(db);
-        };
-        
-        request.onupgradeneeded = (e) => {
-            const database = e.target.result;
-            if (!database.objectStoreNames.contains('matrix')) {
-                database.createObjectStore('matrix');
-            }
-        };
-    });
-}
-
-async function saveToIndexedDB() {
-    if (!db) return;
+function connectDerivWS() {
+    ws = new WebSocket(DERIV_WS);
     
-    try {
-        const tx = db.transaction(['matrix'], 'readwrite');
-        const store = tx.objectStore('matrix');
-        
-        // Save binary matrix directly
-        store.put(matrixBinary, 'matrixBinary');
-        
-        // Save tick history
-        const tickData = {
-            prices: Array.from(tickPrices.slice(0, tickCount)),
-            timestamps: Array.from(tickTimestamps.slice(0, tickCount)),
-            index: tickIndex,
-            count: tickCount
-        };
-        store.put(tickData, 'tickHistory');
-        
-        await tx.complete;
-    } catch (e) {
-        console.error('IndexedDB save error:', e);
-    }
-}
-
-async function loadFromIndexedDB() {
-    if (!db) return;
+    ws.onopen = () => {
+        statusEl.innerText = "AUTH...";
+        ws.send(JSON.stringify({authorize: TOKEN}));
+    };
     
-    try {
-        const tx = db.transaction(['matrix'], 'readonly');
-        const store = tx.objectStore('matrix');
-        
-        const matrixReq = store.get('matrixBinary');
-        const tickReq = store.get('tickHistory');
-        
-        matrixReq.onsuccess = () => {
-            if (matrixReq.result) {
-                matrixBinary = new Uint16Array(matrixReq.result);
-            }
-        };
-        
-        tickReq.onsuccess = () => {
-            if (tickReq.result) {
-                const data = tickReq.result;
-                tickCount = data.count;
-                tickIndex = data.index;
-                for (let i = 0; i < tickCount; i++) {
-                    tickPrices[i] = data.prices[i];
-                    tickTimestamps[i] = data.timestamps[i];
-                }
-            }
-        };
-        
-        await tx.complete;
-        
-        const info = getWeekInfo();
-        if (!info.isWeekend) {
-            currentColumn = info.col;
-            currentRow = info.row;
+    ws.onmessage = (msg) => {
+        const data = JSON.parse(msg.data);
+        if (data.authorize) {
+            statusEl.innerText = "LIVE";
+            statusEl.style.borderColor = "var(--green)";
+            statusEl.style.color = "var(--green)";
+            ws.send(JSON.stringify({ticks: SYMBOL, subscribe: 1}));
         }
-        
-        updatePanels();
-        draw();
-    } catch (e) {
-        console.error('IndexedDB load error:', e);
-    }
+        if (data.tick) handleTick(data.tick, false);
+    };
+    
+    ws.onclose = () => setTimeout(connectDerivWS, 3000);
 }
 
 // ============================================================================
-// RENDERING - OPTIMIZED
+// RENDERING & PANELS
 // ============================================================================
 let frameRequested = false;
 let panelCache = { streak: '', index: '', reversal: '' };
 let activeReversalData = {};
 let pulsingRows = new Set();
+let frameCount = 0;
+let lastFpsTime = performance.now();
+let lastDrawTime = 0;
+let drawTimeMs = 0;
+let CELL_W = 36; 
+let CELL_H = 12;
+let FONT_SIZE_M = 12; 
+const MARGIN_BOTTOM = 42;
+const streakStrings = Array.from({length: 200}, (_, i) => 'x' + i);
+const rowStrings = Array.from({length: 30}, (_, i) => String(i));
+const noPad = (n) => n < 200 ? streakStrings[n] : 'x' + n;
+const timePad = (n) => n < 10 ? '0' + n : String(n);
+
+function updatePerfStats() {
+    if (!perfVisible) return;
+    const now = performance.now();
+    frameCount++;
+    if (now - lastFpsTime >= 1000) {
+        document.getElementById('fps').innerText = frameCount;
+        frameCount = 0;
+        lastFpsTime = now;
+    }
+    document.getElementById('drawTime').innerText = drawTimeMs.toFixed(2);
+    document.getElementById('cellCount').innerText = currentColumn * TOTAL_ROWS;
+    if (performance.memory) {
+        document.getElementById('memUsage').innerText = (performance.memory.usedJSHeapSize / 1024).toFixed(0);
+    }
+}
 
 function requestDraw() {
     if (!frameRequested) {
@@ -662,18 +584,14 @@ function resize() {
     const availableH = window.innerHeight - 40; 
     const gridH = availableH - MARGIN_BOTTOM;
     CELL_H = gridH / TOTAL_ROWS;
-    
     FONT_SIZE_M = Math.max(11, Math.floor(CELL_H * 0.85));
     CELL_W = Math.max(36, FONT_SIZE_M * 2.8);
-    
     const w = chartContainer.clientWidth;
     const h = chartContainer.clientHeight;
-    
     canvas.width = w * dpr;
     canvas.height = h * dpr;
     canvas.style.width = w + 'px';
     canvas.style.height = h + 'px';
-    
     ctx.scale(dpr, dpr);
     updatePanels();
     draw();
@@ -682,8 +600,7 @@ function resize() {
 function draw() {
     const w = document.getElementById('chartContainer').clientWidth;
     const h = document.getElementById('chartContainer').clientHeight;
-    
-    ctx.fillStyle = COL_BG;
+    ctx.fillStyle = "var(--bg)";
     ctx.fillRect(0, 0, w, h);
     
     const endCol = currentColumn + 2; 
@@ -694,9 +611,8 @@ function draw() {
     ctx.translate(-(startCol * CELL_W), 0);
     
     // Grid
-    ctx.save();
     ctx.beginPath();
-    ctx.strokeStyle = COL_GRID;
+    ctx.strokeStyle = "var(--grid)";
     ctx.lineWidth = 0.5;
     const minX = startCol * CELL_W;
     const maxX = (endCol + 5) * CELL_W;
@@ -706,51 +622,40 @@ function draw() {
         ctx.lineTo(maxX, y);
     }
     ctx.stroke();
-    ctx.restore();
 
     ctx.font = `900 ${FONT_SIZE_M}px Consolas,monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-
     const blinkVisible = Date.now() % 400 < 200;
 
-    // Draw cells
     for (let col = startCol; col <= endCol; col++) {
         const x = col * CELL_W;
-        
         if (col === currentColumn) {
             ctx.fillStyle = '#111';
             ctx.fillRect(x, 0, CELL_W, TOTAL_ROWS * CELL_H);
         }
-
         for (let row = 0; row < TOTAL_ROWS; row++) {
             const cell = getCell(col, row);
             if (!cell) continue;
-            
             const isLatest = (col === currentColumn && row === currentRow);
             if (!isLatest || blinkVisible) {
-                ctx.fillStyle = cell.c === 'G' ? COL_GREEN : COL_RED;
+                ctx.fillStyle = cell.c === 'G' ? "var(--green)" : "var(--red)";
                 ctx.fillText(noPad(cell.s), x + CELL_W / 2, (row * CELL_H) + (CELL_H / 2) + 1);
             }
         }
-        
-        // Time labels
         if (col % 10 === 0) {
             const totalSec = col * 30;
             const dayIndex = Math.floor(totalSec / 86400);
             const remainder = totalSec % 86400;
             const hrs = Math.floor(remainder / 3600);
             const mins = Math.floor((remainder % 3600) / 60);
-
             let dayStr = "---";
             if (dayIndex < 5) dayStr = ["MON", "TUE", "WED", "THU", "FRI"][dayIndex];
-
-            ctx.fillStyle = COL_META;
+            ctx.fillStyle = "var(--meta)";
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             ctx.font = '700 10px Consolas,monospace';
             ctx.fillText(dayStr, x + CELL_W / 2, (TOTAL_ROWS * CELL_H) + 8); 
-            
             ctx.font = '700 9px Consolas,monospace';
             ctx.fillText(`${timePad(hrs)}:${timePad(mins)}`, x + CELL_W / 2, (TOTAL_ROWS * CELL_H) + 24);
         }
@@ -758,9 +663,6 @@ function draw() {
     ctx.restore();
 }
 
-// ============================================================================
-// PANELS - BINARY OPTIMIZED
-// ============================================================================
 function updatePanels() {
     updateStreakPanel();
     updateReversalPanel();
@@ -769,10 +671,8 @@ function updatePanels() {
 function detectPulsingRows() {
     pulsingRows.clear();
     const all = [];
-    
     for (let r = 0; r < TOTAL_ROWS; r++) {
         const rS = {}, gS = {};
-        
         for (let c = 0; c < currentColumn; c++) {
             const cell = getCell(c, r);
             if (cell) {
@@ -780,33 +680,22 @@ function detectPulsingRows() {
                 else (gS[cell.s] = gS[cell.s] || []).push(c);
             }
         }
-        
-        for (let s in rS) {
-            all.push({row: r, streak: parseInt(s), c: 'R', sc: parseInt(s) * (100 / rS[s].length)});
-        }
-        for (let s in gS) {
-            all.push({row: r, streak: parseInt(s), c: 'G', sc: parseInt(s) * (100 / gS[s].length)});
-        }
+        for (let s in rS) all.push({row: r, streak: parseInt(s), c: 'R', sc: parseInt(s) * (100 / rS[s].length)});
+        for (let s in gS) all.push({row: r, streak: parseInt(s), c: 'G', sc: parseInt(s) * (100 / gS[s].length)});
     }
-    
     all.sort((a, b) => b.sc - a.sc);
     const top = all.slice(0, 10);
-    
     for (let p of top) {
         const cell = getCell(currentColumn, p.row);
-        if (cell && cell.c === p.c && cell.s >= p.streak - 1) {
-            pulsingRows.add(p.row);
-        }
+        if (cell && cell.c === p.c && cell.s >= p.streak - 1) pulsingRows.add(p.row);
     }
 }
 
 function updateStreakPanel() {
     const parts = [];
     const iParts = [];
-    
     for (let r = 0; r < TOTAL_ROWS; r++) {
         let rM = 0, gM = 0;
-        
         for (let c = 0; c < currentColumn; c++) {
             const cell = getCell(c, r);
             if (cell) {
@@ -814,27 +703,21 @@ function updateStreakPanel() {
                 else gM = Math.max(gM, cell.s);
             }
         }
-        
         const h = CELL_H;
         parts.push(`<div class="streak-row" data-row="${r}" style="height:${h}px"><div class="streak-col red-side">${rM ? noPad(rM) : '--'}</div><div class="streak-col green-side">${gM ? noPad(gM) : '--'}</div></div>`);
         iParts.push(`<div class="index-cell" style="height:${h}px">${rowStrings[r]}</div>`);
     }
-    
     const newStreak = parts.join('');
     const newIndex = iParts.join('');
-    
     if (newStreak !== panelCache.streak) {
         document.getElementById('streakPanel').innerHTML = newStreak;
         panelCache.streak = newStreak;
     }
-    
     detectPulsingRows();
-    
     if (newIndex !== panelCache.index) {
         document.getElementById('indexPanel').innerHTML = newIndex;
         panelCache.index = newIndex;
     }
-    
     const ip = document.getElementById('indexPanel');
     pulsingRows.forEach(rn => {
         if (ip.children[rn]) ip.children[rn].classList.add('pulsing');
@@ -843,10 +726,8 @@ function updateStreakPanel() {
 
 function updateReversalPanel() {
     const rMap = {}, gMap = {};
-    
     for (let r = 0; r < TOTAL_ROWS; r++) {
         const rS = {}, gS = {};
-        
         for (let c = 0; c < currentColumn; c++) {
             const cell = getCell(c, r);
             if (cell) {
@@ -854,14 +735,12 @@ function updateReversalPanel() {
                 else (gS[cell.s] || (gS[cell.s] = [])).push(c);
             }
         }
-        
         const rK = Object.keys(rS).map(Number).sort((a, b) => b - a);
         if (rK.length) {
             const s = rK[0], f = rS[s].length, k = `X${s}-${f}`;
             if (!rMap[k]) rMap[k] = {s, f, rows: [], sc: s * (100 / f)};
             rMap[k].rows.push({row: r});
         }
-        
         const gK = Object.keys(gS).map(Number).sort((a, b) => b - a);
         if (gK.length) {
             const s = gK[0], f = gS[s].length, k = `X${s}-${f}`;
@@ -869,40 +748,29 @@ function updateReversalPanel() {
             gMap[k].rows.push({row: r});
         }
     }
-    
     const rA = Object.values(rMap).sort((a, b) => b.sc - a.sc);
     const gA = Object.values(gMap).sort((a, b) => b.sc - a.sc);
     activeReversalData = {};
-    
     const max = Math.max(rA.length, gA.length, 1);
     const parts = [];
-    
     for (let i = 0; i < max; i++) {
         const rD = rA[i], gD = gA[i];
         const h = CELL_H;
         parts.push(`<div class="reversal-row" style="height:${h}px">`);
-        
         if (rD) {
             const t = `X${rD.s}-${rD.f}`;
             const k = `R_${i}`;
             activeReversalData[k] = {rows: rD.rows, title: t};
             parts.push(`<div class="reversal-col red-side" data-key="${k}" data-type="red">${t}</div>`);
-        } else {
-            parts.push('<div class="reversal-col red-side">--</div>');
-        }
-        
+        } else parts.push('<div class="reversal-col red-side">--</div>');
         if (gD) {
             const t = `X${gD.s}-${gD.f}`;
             const k = `G_${i}`;
             activeReversalData[k] = {rows: gD.rows, title: t};
             parts.push(`<div class="reversal-col green-side" data-key="${k}" data-type="green">${t}</div>`);
-        } else {
-            parts.push('<div class="reversal-col green-side">--</div>');
-        }
-        
+        } else parts.push('<div class="reversal-col green-side">--</div>');
         parts.push('</div>');
     }
-    
     const newReversal = parts.join('');
     if (newReversal !== panelCache.reversal) {
         document.getElementById('reversalPanel').innerHTML = newReversal;
@@ -910,29 +778,12 @@ function updateReversalPanel() {
     }
 }
 
-// ============================================================================
-// EVENT HANDLERS
-// ============================================================================
-document.getElementById('streakPanel').addEventListener('click', e => {
-    const el = e.target.closest('.streak-row');
-    if (el) openModal(parseInt(el.getAttribute('data-row')));
-});
-
-document.getElementById('reversalPanel').addEventListener('click', e => {
-    const el = e.target.closest('.reversal-col[data-key]');
-    if (el) {
-        const d = activeReversalData[el.getAttribute('data-key')];
-        if (d) openReversalModal(d.title, d.rows, el.getAttribute('data-type'));
-    }
-});
-
-function openModal(sec) {
+window.openModal = function(sec) {
     document.getElementById('modalTitle').innerText = `${rowStrings[sec]} ANOMALY HISTORY`;
     document.getElementById('modalTitle').style.color = 'var(--red)';
     document.getElementById('modal').style.border = '1px solid var(--red)';
     document.getElementById('modalDualContent').style.display = 'flex';
     document.getElementById('modalSingleContent').style.display = 'none';
-    
     const rS = [], gS = [];
     for (let c = 0; c < currentColumn; c++) {
         const cell = getCell(c, sec);
@@ -941,26 +792,22 @@ function openModal(sec) {
             else gS.push(cell.s);
         }
     }
-    
     const getSum = (arr) => {
         const counts = {};
         arr.forEach(s => counts[s] = (counts[s] || 0) + 1);
         return Object.keys(counts).map(s => ({s: parseInt(s), c: counts[s]})).sort((a, b) => b.s - a.s);
     };
-    
     document.getElementById('rD').innerHTML = getSum(rS).map(i => 
         `<div class="modal-item" style="color:var(--red);border-bottom:1px solid var(--grid)">${noPad(i.s)} <span style="color:var(--red);font-size:14px">(${i.c})</span></div>`
     ).join('');
-    
     document.getElementById('gD').innerHTML = getSum(gS).map(i => 
         `<div class="modal-item" style="color:var(--green);border-bottom:1px solid var(--grid)">${noPad(i.s)} <span style="color:var(--green);font-size:14px">(${i.c})</span></div>`
     ).join('');
-    
     document.getElementById('modal').classList.add('show');
     document.getElementById('modalOverlay').classList.add('show');
 }
 
-function openReversalModal(t, rows, c) {
+window.openReversalModal = function(t, rows, c) {
     const col = c === 'red' ? 'var(--red)' : 'var(--green)';
     document.getElementById('modalTitle').innerText = `${c.toUpperCase()} ${t}`;
     document.getElementById('modalTitle').style.color = col;
@@ -975,30 +822,19 @@ function openReversalModal(t, rows, c) {
     document.getElementById('modalOverlay').classList.add('show');
 }
 
-function closeModal() {
-    document.getElementById('modal').classList.remove('show');
-    document.getElementById('modalOverlay').classList.remove('show');
-}
+document.getElementById('streakPanel').addEventListener('click', e => {
+    const el = e.target.closest('.streak-row');
+    if (el) window.openModal(parseInt(el.getAttribute('data-row')));
+});
 
-function hardReset() {
-    if (confirm("DELETE DATABASE?")) {
-        matrixBinary = new Uint16Array(MATRIX_SIZE);
-        currentColumn = 0;
-        currentRow = 0;
-        tickCount = 0;
-        tickIndex = 0;
-        if (db) {
-            const tx = db.transaction(['matrix'], 'readwrite');
-            const store = tx.objectStore('matrix');
-            store.clear();
-        }
-        location.reload();
+document.getElementById('reversalPanel').addEventListener('click', e => {
+    const el = e.target.closest('.reversal-col[data-key]');
+    if (el) {
+        const d = activeReversalData[el.getAttribute('data-key')];
+        if (d) window.openReversalModal(d.title, d.rows, el.getAttribute('data-type'));
     }
-}
+});
 
-// ============================================================================
-// INITIALIZATION
-// ============================================================================
 setInterval(() => { 
     updatePanels();
     const now = new Date();
@@ -1008,12 +844,9 @@ setInterval(() => {
 window.onresize = resize;
 
 (async function init() {
-    await initDB();
-    await loadFromIndexedDB();
+    await loadFirebaseData();
     resize();
     connectDerivWS();
-    
-    // Auto-refresh draw
     setInterval(() => requestDraw(), 250);
 })();
 </script>
