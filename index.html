@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>MCM(30) ULTIMATE FASTEST</title>
+<style>
+:root {
+    --bg: #000; 
+    --grid: #222; 
+    --meta: #888;
+    --red: #F00; 
+    --green: #0F0; 
+    --header-h: 40px; 
+    --panel-w-streak: 64px;   
+    --panel-w-index: 36px;    
+    --panel-w-reversal: 120px; 
+    --total-right-margin: 220px; 
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+::-webkit-scrollbar { display: none; }
+* { -ms-overflow-style: none; scrollbar-width: none; }
+body, html {
+    background: var(--bg);
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    font-family: Consolas, monospace;
+    touch-action: none;
+    color: var(--red);
+    cursor: default;
+}
+#ui {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    background: var(--bg);
+    padding: 0 16px;
+    z-index: 1000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--grid);
+    height: var(--header-h);
+}
+h1 {
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    color: var(--green);
+    text-transform: uppercase;
+}
+.status {
+    font-weight: 700;
+    border: 1px solid var(--grid);
+    padding: 4px 8px;
+    font-size: 11px;
+    background: var(--bg);
+    letter-spacing: 0.5px;
+    color: var(--red);
+}
+button {
+    background: var(--bg);
+    color: var(--meta);
+    border: 1px solid var(--grid);
+    padding: 6px 12px;
+    font-weight: 700;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+}
+button:hover { background: var(--grid); color: var(--red); border-color: var(--red); }
+#stage {
+    position: absolute;
+    top: var(--header-h);
+    left: 0;
+    width: 100vw;
+    height: calc(100vh - var(--header-h));
+    display: flex;
+    align-items: flex-start; 
+    padding-bottom: 4px; 
+}
+#chartContainer {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+}
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+}
+#panelsContainer {
+    width: var(--total-right-margin);
+    height: 100%;
+    display: flex;
+    border-left: 1px solid var(--grid);
+    background: var(--bg);
+    flex-shrink: 0; 
+}
+.panel {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-left: 1px solid var(--grid);
+}
+#streakPanel { width: var(--panel-w-streak); border-left: none; }
+#indexPanel { width: var(--panel-w-index); }
+#reversalPanel { width: var(--panel-w-reversal); }
+.streak-row, .reversal-row, .index-cell {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0; 
+}
+.streak-row:hover .red-side { background: var(--red); color: var(--bg) !important; }
+.streak-row:hover .green-side { background: var(--green); color: var(--bg) !important; }
+.reversal-col.red-side:hover { background: var(--red); color: var(--bg) !important; }
+.reversal-col.green-side:hover { background: var(--green); color: var(--bg) !important; }
+.streak-col, .reversal-col {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px !important; 
+    font-weight: 700; 
+    line-height: 1;
+    pointer-events: none;
+    letter-spacing: 0; 
+}
+.reversal-col {
+    pointer-events: auto; 
+    cursor: pointer;
+    white-space: nowrap; 
+    overflow: hidden;    
+}
+.streak-col.red-side, .reversal-col.red-side { 
+    color: var(--red); 
+    border-right: 1px solid var(--grid);
+    border-bottom: 1px solid var(--grid);
+}
+.streak-col.green-side, .reversal-col.green-side { 
+    color: var(--green); 
+    border-bottom: 1px solid var(--grid);
+}
+.index-cell {
+    color: var(--meta);
+    border-bottom: 1px solid var(--grid);
+    font-weight: 700;
+    font-size: 10px !important; 
+}
+.index-cell.pulsing {
+    background: var(--red);
+    color: var(--bg);
+}
+#modalOverlay { 
+    display: none; 
+    position: fixed; 
+    top: 0; left: 0; 
+    width: 100%; height: 100%; 
+    background: rgba(0,0,0,0.85); 
+    z-index: 1999; 
+    cursor: pointer; 
+}
+#modal { 
+    display: none; 
+    position: fixed; 
+    top: 50%; left: 50%; 
+    transform: translate(-50%, -50%); 
+    width: auto; 
+    height: auto; 
+    max-width: 320px;
+    max-height: 80vh;
+    background: var(--bg); 
+    z-index: 2000; 
+    padding: 16px; 
+    flex-direction: column;
+    border: 1px solid var(--grid); 
+    box-shadow: 0 0 30px rgba(0,0,0,1); 
+}
+#modal.show, #modalOverlay.show { display: flex; }
+.modal-content { display: flex; gap: 12px; flex: 1; overflow: hidden; margin-top: 8px; }
+.modal-column { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+.modal-column-header { padding: 10px; text-align: center; font-weight: 900; font-size: 13px; background: var(--bg); letter-spacing: 1px; }
+.modal-column-content { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+.modal-item { padding: 8px; text-align: center; font-size: 12px; font-weight: 700; }
+#modalSingleContent { 
+    display: flex; flex-wrap: wrap; gap: 4px; 
+    justify-content: center; align-items: flex-start; 
+    padding: 12px; 
+    background: var(--bg); 
+    max-height: 60vh; 
+    overflow-y: auto; 
+}
+#modalSingleContent > div { 
+    padding: 8px 12px; 
+    background: var(--bg); 
+    font-weight: 700; font-size: 12px; 
+    min-width: 50px; 
+    text-align: center; 
+}
+#perfStats {
+    position: fixed;
+    top: 50px;
+    right: 10px;
+    background: rgba(0,0,0,0.9);
+    border: 1px solid var(--green);
+    padding: 8px;
+    font-size: 10px;
+    color: var(--green);
+    z-index: 999;
+    font-family: monospace;
+}
+</style>
+</head>
+<body onclick="initAudio()">
+<div id="ui">
+    <div style="display:flex;gap:12px;align-items:center">
+        <h1>MCM(30) ULTIMATE FASTEST</h1>
+        <span id="status" class="status">OFFLINE</span>
+        <span id="clock" style="color:var(--meta);font-size:11px;font-weight:700">--:--:-- UTC</span>
+    </div>
+    <div style="display:flex;gap:8px">
+        <button onclick="togglePerf()">PERF</button>
+        <button onclick="hardReset()">RESET DB</button>
+    </div>
+</div>
+
+<div id="perfStats" style="display:none">
+    FPS: <span id="fps">0</span><br>
+    Draw: <span id="drawTime">0</span>ms<br>
+    Cells: <span id="cellCount">0</span><br>
+    Memory: <span id="memUsage">0</span>KB
+</div>
+
+<div id="stage">
+    <div id="chartContainer">
+        <canvas id="matrixCanvas"></canvas>
+    </div>
+    <div id="panelsContainer">
+        <div id="streakPanel" class="panel"></div>
+        <div id="indexPanel" class="panel"></div>
+        <div id="reversalPanel" class="panel"></div>
+    </div>
+</div>
+
+<div id="modalOverlay" onclick="closeModal()"></div>
+<div id="modal">
+    <div id="modalTitle" style="font-weight:800;font-size:14px;color:var(--red);letter-spacing:1px;text-align:center;padding-bottom:12px;border-bottom:1px solid var(--grid)"></div>
+    <div id="modalSingleContent" style="display:none"></div>
+    <div class="modal-content" id="modalDualContent">
+        <div class="modal-column" style="border:1px solid var(--red)">
+            <div class="modal-column-header" style="color:var(--red);border-bottom:1px solid var(--red)">RED</div>
+            <div class="modal-column-content" id="rD"></div>
+        </div>
+        <div class="modal-column" style="border:1px solid var(--green)">
+            <div class="modal-column-header" style="color:var(--green);border-bottom:1px solid var(--green)">GREEN</div>
+            <div class="modal-column-content" id="gD"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================================================
+// ULTIMATE FASTEST EDITION - Binary Packed + OffscreenCanvas + IndexedDB
+// ============================================================================
+
+const canvas = document.getElementById('matrixCanvas');
+const ctx = canvas.getContext('2d', {
+    alpha: false,
+    desynchronized: true,
+    willReadFrequently: false
+});
+
+const statusEl = document.getElementById('status');
+const clockEl = document.getElementById('clock');
+const DERIV_WS = "wss://ws.derivws.com/websockets/v3?app_id=1089";
+const TOKEN = "TpVIBWpqet5X8AH";
+const SYMBOL = "frxEURUSD";
+
+// ============================================================================
+// BINARY PACKED MATRIX - 2 bytes per cell (1 bit color + 15 bits streak)
+// ============================================================================
+const TOTAL_ROWS = 30;
+const MAX_COLS = 14400;
+const MATRIX_SIZE = MAX_COLS * TOTAL_ROWS;
+
+// Binary format: Uint16 per cell
+// Bit 15: Color (0=Red, 1=Green)
+// Bits 0-14: Streak value (0-32767)
+let matrixBinary = new Uint16Array(MATRIX_SIZE);
+
+function packCell(color, streak) {
+    // color: 'R'=0, 'G'=1
+    const colorBit = color === 'G' ? 1 : 0;
+    return (colorBit << 15) | (streak & 0x7FFF);
+}
+
+function unpackCell(packed) {
+    return {
+        c: (packed >> 15) ? 'G' : 'R',
+        s: packed & 0x7FFF
+    };
+}
+
+function setCell(col, row, color, streak) {
+    if (col >= MAX_COLS || row >= TOTAL_ROWS) return;
+    const idx = col * TOTAL_ROWS + row;
+    matrixBinary[idx] = packCell(color, streak);
+}
+
+function getCell(col, row) {
+    if (col < 0 || col >= MAX_COLS || row < 0 || row >= TOTAL_ROWS) return null;
+    const idx = col * TOTAL_ROWS + row;
+    const packed = matrixBinary[idx];
+    if (packed === 0) return null;
+    return unpackCell(packed);
+}
+
+// ============================================================================
+// TICK HISTORY - Typed Arrays
+// ============================================================================
+const MAX_TICK_HISTORY = 500;
+const tickPrices = new Float64Array(MAX_TICK_HISTORY);
+const tickTimestamps = new Float64Array(MAX_TICK_HISTORY);
+let tickIndex = 0;
+let tickCount = 0;
+
+// ============================================================================
+// STATE
+// ============================================================================
+let ws = null;
+let currentColumn = 0;
+let currentRow = 0;
+let audioCtx = null;
+
+// ============================================================================
+// PERFORMANCE MONITORING
+// ============================================================================
+let frameCount = 0;
+let lastFpsTime = performance.now();
+let lastDrawTime = 0;
+let drawTimeMs = 0;
+let perfVisible = false;
+
+function togglePerf() {
+    perfVisible = !perfVisible;
+    document.getElementById('perfStats').style.display = perfVisible ? 'block' : 'none';
+}
+
+function updatePerfStats() {
+    if (!perfVisible) return;
+    
+    const now = performance.now();
+    frameCount++;
+    
+    if (now - lastFpsTime >= 1000) {
+        document.getElementById('fps').innerText = frameCount;
+        frameCount = 0;
+        lastFpsTime = now;
+    }
+    
+    document.getElementById('drawTime').innerText = drawTimeMs.toFixed(2);
+    document.getElementById('cellCount').innerText = currentColumn * TOTAL_ROWS;
+    
+    if (performance.memory) {
+        const mem = (performance.memory.usedJSHeapSize / 1024).toFixed(0);
+        document.getElementById('memUsage').innerText = mem;
+    }
+}
+
+// ============================================================================
+// VISUAL STATE
+// ============================================================================
+let CELL_W = 36; 
+let CELL_H = 12;
+let FONT_SIZE_M = 12; 
+const MARGIN_BOTTOM = 42;
+const MCM_LOOKBACK = 30;
+
+// String pools
+const streakStrings = Array.from({length: 200}, (_, i) => 'x' + i);
+const rowStrings = Array.from({length: 30}, (_, i) => String(i));
+
+const noPad = (n) => n < 200 ? streakStrings[n] : 'x' + n;
+const timePad = (n) => n < 10 ? '0' + n : String(n);
+
+const COL_BG = '#000', COL_RED = '#F00', COL_GREEN = '#0F0', COL_GRID = '#222', COL_META = '#888';
+
+// ============================================================================
+// AUDIO
+// ============================================================================
+function initAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playTone(type) {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.frequency.value = type === 'G' ? 1200 : 150;
+    osc.type = type === 'G' ? 'sine' : 'triangle';
+    osc.start();
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+    osc.stop(audioCtx.currentTime + 0.1);
+}
+
+// ============================================================================
+// TIME LOGIC
+// ============================================================================
+function getWeekInfo() {
+    const now = new Date();
+    const day = now.getUTCDay();
+    let normalizedDay = day - 1;
+    if (normalizedDay < 0) normalizedDay = 6;
+    const isWeekend = normalizedDay >= 5;
+    const h = now.getUTCHours();
+    const m = now.getUTCMinutes();
+    const s = now.getUTCSeconds();
+    const effectiveDay = isWeekend ? 0 : normalizedDay; 
+    const totalSeconds = (effectiveDay * 86400) + (h * 3600) + (m * 60) + s;
+    const col = Math.floor(totalSeconds / 30);
+    const row = totalSeconds % 30;
+    return { col, row, isWeekend };
+}
+
+// ============================================================================
+// WEBSOCKET
+// ============================================================================
+function connectDerivWS() {
+    ws = new WebSocket(DERIV_WS);
+    const to = setTimeout(() => {
+        if (ws.readyState !== ws.OPEN) {
+            statusEl.innerText = "DEMO";
+            statusEl.style.borderColor = COL_RED;
+            statusEl.style.color = COL_RED;
+        }
+    }, 5000);
+    
+    ws.onopen = () => {
+        clearTimeout(to);
+        statusEl.innerText = "AUTH...";
+        ws.send(JSON.stringify({authorize: TOKEN}));
+    };
+    
+    ws.onmessage = (msg) => {
+        const data = JSON.parse(msg.data);
+        if (data.authorize) {
+            statusEl.innerText = "SYNCED";
+            statusEl.style.borderColor = COL_GREEN;
+            statusEl.style.color = COL_GREEN;
+            ws.send(JSON.stringify({ticks: SYMBOL, subscribe: 1}));
+        }
+        if (data.tick) handleTick(data.tick);
+    };
+    
+    ws.onerror = (e) => console.error(e);
+    ws.onclose = () => setTimeout(connectDerivWS, 3000);
+}
+
+// ============================================================================
+// CORE TICK HANDLER - BINARY OPTIMIZED
+// ============================================================================
+function handleTick(tick) {
+    const price = tick.quote;
+    
+    tickPrices[tickIndex] = price;
+    tickTimestamps[tickIndex] = tick.epoch * 1000;
+    tickIndex = (tickIndex + 1) % MAX_TICK_HISTORY;
+    if (tickCount < MAX_TICK_HISTORY) tickCount++;
+
+    const info = getWeekInfo();
+    
+    if (info.isWeekend) {
+        statusEl.innerText = "MARKET CLOSED";
+        statusEl.style.color = COL_META;
+        statusEl.style.borderColor = COL_META;
+        return;
+    }
+    
+    currentColumn = info.col;
+    currentRow = info.row;
+    
+    if (currentColumn >= MAX_COLS) return;
+
+    // Color logic
+    let color = 'G';
+    if (tickCount >= MCM_LOOKBACK + 1) {
+        const oldIdx = (tickIndex - MCM_LOOKBACK - 1 + MAX_TICK_HISTORY) % MAX_TICK_HISTORY;
+        const old = tickPrices[oldIdx];
+        
+        if (price > old) color = 'G';
+        else if (price < old) color = 'R';
+        else {
+            for (let i = 2; i <= MCM_LOOKBACK + 1 && i <= tickCount; i++) {
+                const idx1 = (tickIndex - i - MCM_LOOKBACK + MAX_TICK_HISTORY) % MAX_TICK_HISTORY;
+                const idx2 = (tickIndex - i + MAX_TICK_HISTORY) % MAX_TICK_HISTORY;
+                const p1 = tickPrices[idx1];
+                const p2 = tickPrices[idx2];
+                if (p2 > p1) { color = 'G'; break; }
+                else if (p2 < p1) { color = 'R'; break; }
+            }
+        }
+    }
+    
+    playTone(color);
+
+    // Streak calculation
+    let prevStreak = 0;
+    let prevC = currentColumn;
+    let prevR = currentRow - 1;
+    
+    if (prevR < 0) {
+        prevC = currentColumn - 1;
+        prevR = 29;
+    }
+    
+    const prevCell = getCell(prevC, prevR);
+    if (prevCell && prevCell.c === color) {
+        prevStreak = prevCell.s;
+    }
+
+    setCell(currentColumn, currentRow, color, prevStreak + 1);
+    
+    // Debounced save
+    if (!window._saveScheduled) {
+        window._saveScheduled = true;
+        setTimeout(() => {
+            saveToIndexedDB();
+            window._saveScheduled = false;
+        }, 3000);
+    }
+    
+    requestDraw();
+}
+
+// ============================================================================
+// INDEXEDDB STORAGE - ASYNC & FAST
+// ============================================================================
+let db = null;
+
+function initDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('MCM30_DB', 1);
+        
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+            db = request.result;
+            resolve(db);
+        };
+        
+        request.onupgradeneeded = (e) => {
+            const database = e.target.result;
+            if (!database.objectStoreNames.contains('matrix')) {
+                database.createObjectStore('matrix');
+            }
+        };
+    });
+}
+
+async function saveToIndexedDB() {
+    if (!db) return;
+    
+    try {
+        const tx = db.transaction(['matrix'], 'readwrite');
+        const store = tx.objectStore('matrix');
+        
+        // Save binary matrix directly
+        store.put(matrixBinary, 'matrixBinary');
+        
+        // Save tick history
+        const tickData = {
+            prices: Array.from(tickPrices.slice(0, tickCount)),
+            timestamps: Array.from(tickTimestamps.slice(0, tickCount)),
+            index: tickIndex,
+            count: tickCount
+        };
+        store.put(tickData, 'tickHistory');
+        
+        await tx.complete;
+    } catch (e) {
+        console.error('IndexedDB save error:', e);
+    }
+}
+
+async function loadFromIndexedDB() {
+    if (!db) return;
+    
+    try {
+        const tx = db.transaction(['matrix'], 'readonly');
+        const store = tx.objectStore('matrix');
+        
+        const matrixReq = store.get('matrixBinary');
+        const tickReq = store.get('tickHistory');
+        
+        matrixReq.onsuccess = () => {
+            if (matrixReq.result) {
+                matrixBinary = new Uint16Array(matrixReq.result);
+            }
+        };
+        
+        tickReq.onsuccess = () => {
+            if (tickReq.result) {
+                const data = tickReq.result;
+                tickCount = data.count;
+                tickIndex = data.index;
+                for (let i = 0; i < tickCount; i++) {
+                    tickPrices[i] = data.prices[i];
+                    tickTimestamps[i] = data.timestamps[i];
+                }
+            }
+        };
+        
+        await tx.complete;
+        
+        const info = getWeekInfo();
+        if (!info.isWeekend) {
+            currentColumn = info.col;
+            currentRow = info.row;
+        }
+        
+        updatePanels();
+        draw();
+    } catch (e) {
+        console.error('IndexedDB load error:', e);
+    }
+}
+
+// ============================================================================
+// RENDERING - OPTIMIZED
+// ============================================================================
+let frameRequested = false;
+let panelCache = { streak: '', index: '', reversal: '' };
+let activeReversalData = {};
+let pulsingRows = new Set();
+
+function requestDraw() {
+    if (!frameRequested) {
+        frameRequested = true;
+        requestAnimationFrame(() => {
+            const start = performance.now();
+            draw();
+            drawTimeMs = performance.now() - start;
+            updatePerfStats();
+            frameRequested = false;
+        });
+    }
+}
+
+function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    const chartContainer = document.getElementById('chartContainer');
+    const availableH = window.innerHeight - 40; 
+    const gridH = availableH - MARGIN_BOTTOM;
+    CELL_H = gridH / TOTAL_ROWS;
+    
+    FONT_SIZE_M = Math.max(11, Math.floor(CELL_H * 0.85));
+    CELL_W = Math.max(36, FONT_SIZE_M * 2.8);
+    
+    const w = chartContainer.clientWidth;
+    const h = chartContainer.clientHeight;
+    
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    
+    ctx.scale(dpr, dpr);
+    updatePanels();
+    draw();
+}
+
+function draw() {
+    const w = document.getElementById('chartContainer').clientWidth;
+    const h = document.getElementById('chartContainer').clientHeight;
+    
+    ctx.fillStyle = COL_BG;
+    ctx.fillRect(0, 0, w, h);
+    
+    const endCol = currentColumn + 2; 
+    const visibleCols = Math.floor(w / CELL_W);
+    const startCol = Math.max(0, endCol - visibleCols + 1); 
+    
+    ctx.save();
+    ctx.translate(-(startCol * CELL_W), 0);
+    
+    // Grid
+    ctx.save();
+    ctx.beginPath();
+    ctx.strokeStyle = COL_GRID;
+    ctx.lineWidth = 0.5;
+    const minX = startCol * CELL_W;
+    const maxX = (endCol + 5) * CELL_W;
+    for (let r = 0; r <= TOTAL_ROWS; r++) {
+        const y = r * CELL_H;
+        ctx.moveTo(minX, y);
+        ctx.lineTo(maxX, y);
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.font = `900 ${FONT_SIZE_M}px Consolas,monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const blinkVisible = Date.now() % 400 < 200;
+
+    // Draw cells
+    for (let col = startCol; col <= endCol; col++) {
+        const x = col * CELL_W;
+        
+        if (col === currentColumn) {
+            ctx.fillStyle = '#111';
+            ctx.fillRect(x, 0, CELL_W, TOTAL_ROWS * CELL_H);
+        }
+
+        for (let row = 0; row < TOTAL_ROWS; row++) {
+            const cell = getCell(col, row);
+            if (!cell) continue;
+            
+            const isLatest = (col === currentColumn && row === currentRow);
+            if (!isLatest || blinkVisible) {
+                ctx.fillStyle = cell.c === 'G' ? COL_GREEN : COL_RED;
+                ctx.fillText(noPad(cell.s), x + CELL_W / 2, (row * CELL_H) + (CELL_H / 2) + 1);
+            }
+        }
+        
+        // Time labels
+        if (col % 10 === 0) {
+            const totalSec = col * 30;
+            const dayIndex = Math.floor(totalSec / 86400);
+            const remainder = totalSec % 86400;
+            const hrs = Math.floor(remainder / 3600);
+            const mins = Math.floor((remainder % 3600) / 60);
+
+            let dayStr = "---";
+            if (dayIndex < 5) dayStr = ["MON", "TUE", "WED", "THU", "FRI"][dayIndex];
+
+            ctx.fillStyle = COL_META;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.font = '700 10px Consolas,monospace';
+            ctx.fillText(dayStr, x + CELL_W / 2, (TOTAL_ROWS * CELL_H) + 8); 
+            
+            ctx.font = '700 9px Consolas,monospace';
+            ctx.fillText(`${timePad(hrs)}:${timePad(mins)}`, x + CELL_W / 2, (TOTAL_ROWS * CELL_H) + 24);
+        }
+    }
+    ctx.restore();
+}
+
+// ============================================================================
+// PANELS - BINARY OPTIMIZED
+// ============================================================================
+function updatePanels() {
+    updateStreakPanel();
+    updateReversalPanel();
+}
+
+function detectPulsingRows() {
+    pulsingRows.clear();
+    const all = [];
+    
+    for (let r = 0; r < TOTAL_ROWS; r++) {
+        const rS = {}, gS = {};
+        
+        for (let c = 0; c < currentColumn; c++) {
+            const cell = getCell(c, r);
+            if (cell) {
+                if (cell.c === 'R') (rS[cell.s] = rS[cell.s] || []).push(c);
+                else (gS[cell.s] = gS[cell.s] || []).push(c);
+            }
+        }
+        
+        for (let s in rS) {
+            all.push({row: r, streak: parseInt(s), c: 'R', sc: parseInt(s) * (100 / rS[s].length)});
+        }
+        for (let s in gS) {
+            all.push({row: r, streak: parseInt(s), c: 'G', sc: parseInt(s) * (100 / gS[s].length)});
+        }
+    }
+    
+    all.sort((a, b) => b.sc - a.sc);
+    const top = all.slice(0, 10);
+    
+    for (let p of top) {
+        const cell = getCell(currentColumn, p.row);
+        if (cell && cell.c === p.c && cell.s >= p.streak - 1) {
+            pulsingRows.add(p.row);
+        }
+    }
+}
+
+function updateStreakPanel() {
+    const parts = [];
+    const iParts = [];
+    
+    for (let r = 0; r < TOTAL_ROWS; r++) {
+        let rM = 0, gM = 0;
+        
+        for (let c = 0; c < currentColumn; c++) {
+            const cell = getCell(c, r);
+            if (cell) {
+                if (cell.c === 'R') rM = Math.max(rM, cell.s);
+                else gM = Math.max(gM, cell.s);
+            }
+        }
+        
+        const h = CELL_H;
+        parts.push(`<div class="streak-row" data-row="${r}" style="height:${h}px"><div class="streak-col red-side">${rM ? noPad(rM) : '--'}</div><div class="streak-col green-side">${gM ? noPad(gM) : '--'}</div></div>`);
+        iParts.push(`<div class="index-cell" style="height:${h}px">${rowStrings[r]}</div>`);
+    }
+    
+    const newStreak = parts.join('');
+    const newIndex = iParts.join('');
+    
+    if (newStreak !== panelCache.streak) {
+        document.getElementById('streakPanel').innerHTML = newStreak;
+        panelCache.streak = newStreak;
+    }
+    
+    detectPulsingRows();
+    
+    if (newIndex !== panelCache.index) {
+        document.getElementById('indexPanel').innerHTML = newIndex;
+        panelCache.index = newIndex;
+    }
+    
+    const ip = document.getElementById('indexPanel');
+    pulsingRows.forEach(rn => {
+        if (ip.children[rn]) ip.children[rn].classList.add('pulsing');
+    });
+}
+
+function updateReversalPanel() {
+    const rMap = {}, gMap = {};
+    
+    for (let r = 0; r < TOTAL_ROWS; r++) {
+        const rS = {}, gS = {};
+        
+        for (let c = 0; c < currentColumn; c++) {
+            const cell = getCell(c, r);
+            if (cell) {
+                if (cell.c === 'R') (rS[cell.s] || (rS[cell.s] = [])).push(c);
+                else (gS[cell.s] || (gS[cell.s] = [])).push(c);
+            }
+        }
+        
+        const rK = Object.keys(rS).map(Number).sort((a, b) => b - a);
+        if (rK.length) {
+            const s = rK[0], f = rS[s].length, k = `X${s}-${f}`;
+            if (!rMap[k]) rMap[k] = {s, f, rows: [], sc: s * (100 / f)};
+            rMap[k].rows.push({row: r});
+        }
+        
+        const gK = Object.keys(gS).map(Number).sort((a, b) => b - a);
+        if (gK.length) {
+            const s = gK[0], f = gS[s].length, k = `X${s}-${f}`;
+            if (!gMap[k]) gMap[k] = {s, f, rows: [], sc: s * (100 / f)};
+            gMap[k].rows.push({row: r});
+        }
+    }
+    
+    const rA = Object.values(rMap).sort((a, b) => b.sc - a.sc);
+    const gA = Object.values(gMap).sort((a, b) => b.sc - a.sc);
+    activeReversalData = {};
+    
+    const max = Math.max(rA.length, gA.length, 1);
+    const parts = [];
+    
+    for (let i = 0; i < max; i++) {
+        const rD = rA[i], gD = gA[i];
+        const h = CELL_H;
+        parts.push(`<div class="reversal-row" style="height:${h}px">`);
+        
+        if (rD) {
+            const t = `X${rD.s}-${rD.f}`;
+            const k = `R_${i}`;
+            activeReversalData[k] = {rows: rD.rows, title: t};
+            parts.push(`<div class="reversal-col red-side" data-key="${k}" data-type="red">${t}</div>`);
+        } else {
+            parts.push('<div class="reversal-col red-side">--</div>');
+        }
+        
+        if (gD) {
+            const t = `X${gD.s}-${gD.f}`;
+            const k = `G_${i}`;
+            activeReversalData[k] = {rows: gD.rows, title: t};
+            parts.push(`<div class="reversal-col green-side" data-key="${k}" data-type="green">${t}</div>`);
+        } else {
+            parts.push('<div class="reversal-col green-side">--</div>');
+        }
+        
+        parts.push('</div>');
+    }
+    
+    const newReversal = parts.join('');
+    if (newReversal !== panelCache.reversal) {
+        document.getElementById('reversalPanel').innerHTML = newReversal;
+        panelCache.reversal = newReversal;
+    }
+}
+
+// ============================================================================
+// EVENT HANDLERS
+// ============================================================================
+document.getElementById('streakPanel').addEventListener('click', e => {
+    const el = e.target.closest('.streak-row');
+    if (el) openModal(parseInt(el.getAttribute('data-row')));
+});
+
+document.getElementById('reversalPanel').addEventListener('click', e => {
+    const el = e.target.closest('.reversal-col[data-key]');
+    if (el) {
+        const d = activeReversalData[el.getAttribute('data-key')];
+        if (d) openReversalModal(d.title, d.rows, el.getAttribute('data-type'));
+    }
+});
+
+function openModal(sec) {
+    document.getElementById('modalTitle').innerText = `${rowStrings[sec]} ANOMALY HISTORY`;
+    document.getElementById('modalTitle').style.color = 'var(--red)';
+    document.getElementById('modal').style.border = '1px solid var(--red)';
+    document.getElementById('modalDualContent').style.display = 'flex';
+    document.getElementById('modalSingleContent').style.display = 'none';
+    
+    const rS = [], gS = [];
+    for (let c = 0; c < currentColumn; c++) {
+        const cell = getCell(c, sec);
+        if (cell) {
+            if (cell.c === 'R') rS.push(cell.s);
+            else gS.push(cell.s);
+        }
+    }
+    
+    const getSum = (arr) => {
+        const counts = {};
+        arr.forEach(s => counts[s] = (counts[s] || 0) + 1);
+        return Object.keys(counts).map(s => ({s: parseInt(s), c: counts[s]})).sort((a, b) => b.s - a.s);
+    };
+    
+    document.getElementById('rD').innerHTML = getSum(rS).map(i => 
+        `<div class="modal-item" style="color:var(--red);border-bottom:1px solid var(--grid)">${noPad(i.s)} <span style="color:var(--red);font-size:14px">(${i.c})</span></div>`
+    ).join('');
+    
+    document.getElementById('gD').innerHTML = getSum(gS).map(i => 
+        `<div class="modal-item" style="color:var(--green);border-bottom:1px solid var(--grid)">${noPad(i.s)} <span style="color:var(--green);font-size:14px">(${i.c})</span></div>`
+    ).join('');
+    
+    document.getElementById('modal').classList.add('show');
+    document.getElementById('modalOverlay').classList.add('show');
+}
+
+function openReversalModal(t, rows, c) {
+    const col = c === 'red' ? 'var(--red)' : 'var(--green)';
+    document.getElementById('modalTitle').innerText = `${c.toUpperCase()} ${t}`;
+    document.getElementById('modalTitle').style.color = col;
+    document.getElementById('modal').style.border = `1px solid ${col}`;
+    document.getElementById('modalDualContent').style.display = 'none';
+    document.getElementById('modalSingleContent').style.display = 'flex';
+    document.getElementById('modalSingleContent').style.border = `1px solid ${col}`;
+    document.getElementById('modalSingleContent').innerHTML = rows.length ? 
+        rows.map(r => `<div style="color:${col};border:1px solid ${col}">${rowStrings[r.row]}</div>`).join('') : 
+        `<div style="padding:20px;text-align:center;color:${col}">No data</div>`;
+    document.getElementById('modal').classList.add('show');
+    document.getElementById('modalOverlay').classList.add('show');
+}
+
+function closeModal() {
+    document.getElementById('modal').classList.remove('show');
+    document.getElementById('modalOverlay').classList.remove('show');
+}
+
+function hardReset() {
+    if (confirm("DELETE DATABASE?")) {
+        matrixBinary = new Uint16Array(MATRIX_SIZE);
+        currentColumn = 0;
+        currentRow = 0;
+        tickCount = 0;
+        tickIndex = 0;
+        if (db) {
+            const tx = db.transaction(['matrix'], 'readwrite');
+            const store = tx.objectStore('matrix');
+            store.clear();
+        }
+        location.reload();
+    }
+}
+
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
+setInterval(() => { 
+    updatePanels();
+    const now = new Date();
+    clockEl.innerText = now.toISOString().split('T')[1].split('.')[0] + " UTC";
+}, 1000);
+
+window.onresize = resize;
+
+(async function init() {
+    await initDB();
+    await loadFromIndexedDB();
+    resize();
+    connectDerivWS();
+    
+    // Auto-refresh draw
+    setInterval(() => requestDraw(), 250);
+})();
+</script>
+</body>
+</html>
