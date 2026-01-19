@@ -3,103 +3,72 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>MCM(30) CORE DNA [CLOUD MASTER]</title>
+<title>MCM(30) EURUSD CORE</title>
 <style>
-/* EXACT STYLES FROM ORIGINAL 30.HTML */
-:root {
-    --bg:    #000000; 
-    --grid:  #222222; 
-    --meta:  #888888;
-    --red:   #FF0000; 
-    --green: #00FF00; 
-    --blue:  #3b82f6;
-    --header-h: 40px; 
-    --panel-w-streak: 64px;   
-    --panel-w-index: 36px;    
-    --panel-w-reversal: 120px; 
-    --total-right-margin: 220px; 
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-::-webkit-scrollbar { display: none; }
-body, html {
-    background-color: var(--bg);
-    width: 100vw; height: 100vh;
-    overflow: hidden; font-family: Consolas, monospace;
-    touch-action: none; color: var(--red);
-}
-#ui {
-    position: fixed; top: 0; left: 0; width: 100%; height: var(--header-h);
-    background-color: var(--bg); border-bottom: 1px solid var(--grid);
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 16px; z-index: 1000;
-}
-h1 { font-size: 14px; color: var(--green); letter-spacing: 2px; font-weight: 900; }
-#status { font-size: 11px; font-weight: 900; color: var(--red); border: 1px solid var(--grid); padding: 4px 8px; }
-
-canvas { display: block; margin-top: var(--header-h); cursor: crosshair; }
-
-#panelsContainer {
-    position: fixed; right: 0; top: var(--header-h); height: calc(100vh - var(--header-h));
-    width: var(--total-right-margin); display: flex; background-color: var(--bg); border-left: 1px solid var(--grid); z-index: 999;
-}
-.panel { height: 100%; display: flex; flex-direction: column; overflow: hidden; border-left: 1px solid var(--grid); }
-#streakPanel { width: var(--panel-w-streak); border-left: none; }
-#indexPanel { width: var(--panel-w-index); }
-#reversalPanel { width: var(--panel-w-reversal); }
-
-.streak-row, .reversal-row { display: flex; width: 100%; border-bottom: 1px solid var(--grid); cursor: pointer; flex-shrink: 0; }
-.streak-col, .reversal-col { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; padding: 1px 0; line-height: 1; }
-.red-side { color: var(--red); border-right: 1px solid var(--grid); }
-.green-side { color: var(--green); }
-
-.index-cell { width: 100%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 900; color: var(--meta); border-bottom: 1px solid var(--grid); flex-shrink: 0; transition: all 0.3s; }
-.index-cell.pulsing { background-color: var(--blue); color: #fff; animation: pulseAnom 0.8s infinite alternate; }
-@keyframes pulseAnom { from { opacity: 1; } to { opacity: 0.4; } }
-
-/* MODAL STYLES PRESERVED FROM ORIGINAL */
-#modalOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1999; }
-#modal { 
-    display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); 
-    width: 220px; max-height: 80vh; background: var(--bg); border: 1px solid var(--grid); 
-    z-index: 2000; padding: 15px; flex-direction: column; 
-}
-#modal.show, #modalOverlay.show { display: flex; }
-#modalTitle { text-align: center; font-weight: 900; margin-bottom: 10px; font-size: 12px; }
-#modalSingleContent { display: none; flex-wrap: wrap; gap: 4px; justify-content: center; padding: 5px; }
-#modalDualContent { display: flex; gap: 5px; }
-.modal-col-box { flex: 1; border: 1px solid var(--grid); }
-.modal-col-header { text-align: center; font-size: 10px; border-bottom: 1px solid var(--grid); padding: 4px; font-weight: 900; }
+:root{--red:#ef4444;--green:#10b981;--blue:#3b82f6;--bg:#f5f5f5;--ui-bg:#fff;--grid:#d1d5db;--border:#9ca3af;--text:#1f2937;--text-muted:#6b7280;--shadow:rgba(0,0,0,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body,html{background:var(--bg);width:100vw;height:100vh;overflow:hidden;font-family:ui-monospace,monospace;touch-action:none;color:var(--text)}
+#ui{position:fixed;top:0;left:0;width:100%;background:var(--ui-bg);padding:0 12px;z-index:1000;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--grid);height:42px;box-shadow:0 2px 8px var(--shadow)}
+.status{font-weight:600;border:1px solid var(--green);padding:2px 8px;font-size:10px;color:var(--green)}
+button{background:#fff;color:var(--blue);border:2px solid var(--blue);padding:4px 12px;font-weight:600;font-size:10px;cursor:pointer;font-family:inherit;transition:all .2s;border-radius:3px}
+button:hover{background:var(--blue);color:#fff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(59,130,246,.3)}
+button.active{background:var(--blue);color:#fff;box-shadow:0 2px 8px rgba(59,130,246,.4)}
+canvas{display:block;margin-top:42px;cursor:grab;will-change:transform}
+canvas:active{cursor:grabbing}
+#streakPanel,#indexPanel,#reversalPanel{position:fixed;top:42px;height:calc(100vh - 42px);background:var(--ui-bg);border-left:2px solid var(--grid);border-right:2px solid var(--grid);z-index:999;box-shadow:-2px 0 8px var(--shadow);overflow:hidden;will-change:contents}
+#streakPanel{right:105px;width:40px}
+#indexPanel{right:75px;width:30px}
+#reversalPanel{right:0;width:75px}
+.streak-row,.reversal-row{display:flex;width:100%;border-bottom:1px solid var(--grid);cursor:pointer;transition:background .2s}
+.streak-row:hover,.reversal-col:hover{background:rgba(59,130,246,.08)}
+.streak-col,.reversal-col{flex:1;display:flex;align-items:center;justify-content:center;font-size:5px;font-weight:700;padding:.5px;line-height:1.05}
+.streak-col.red-side,.reversal-col.red-side{color:var(--red);border-right:1px solid var(--grid)}
+.streak-col.green-side,.reversal-col.green-side{color:var(--green)}
+.reversal-col{text-align:center;white-space:nowrap;overflow:hidden;letter-spacing:-.2px;cursor:pointer;transition:background .2s}
+.index-cell{position:absolute;width:100%;display:flex;align-items:center;justify-content:center;font-size:5px;font-weight:700;color:var(--text);border-bottom:1px solid var(--grid);padding:.5px;line-height:1.05;transition:all .3s}
+.index-cell.pulsing{animation:pulseIndex 1s ease-in-out infinite;color:var(--blue);font-weight:900}
+@keyframes pulseIndex{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.3);opacity:.7}}
+#modalOverlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:1999;backdrop-filter:blur(4px)}
+#modal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);max-width:90vw;max-height:90vh;background:var(--ui-bg);border:2px solid var(--border);z-index:2000;padding:20px;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3);border-radius:12px}
+#modal.show,#modalOverlay.show{display:flex}
+.modal-content{display:flex;gap:10px;flex:1;overflow:hidden}
+.modal-column{flex:1;display:flex;flex-direction:column;border:2px solid var(--grid);overflow:hidden;background:var(--bg);border-radius:8px}
+.modal-column-header{padding:10px;text-align:center;font-weight:700;font-size:11px;border-bottom:2px solid var(--grid);background:var(--ui-bg);color:var(--text)}
+.modal-column-content{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+#modalSingleContent{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:flex-start;padding:15px;border:2px solid var(--grid);background:var(--bg);border-radius:8px;max-height:70vh;overflow-y:auto}
+#modalSingleContent>div{padding:8px 12px;border:1px solid var(--grid);background:var(--ui-bg);border-radius:4px;font-weight:600;font-size:11px;min-width:50px;text-align:center}
+@media(max-width:500px){#modal{width:90%;max-width:400px}}
 </style>
 </head>
 <body>
-
 <div id="ui">
-    <div style="display:flex; gap:15px; align-items:center;">
-        <h1>MCM(30) MASTER</h1>
-        <div id="status">OFFLINE</div>
-    </div>
-    <div style="display:flex; gap:10px;">
-        <button id="resetBtn" style="background:#300; color:#F00; border:1px solid #F00; padding:4px 8px; font-size:10px; font-weight:900; cursor:pointer;">HARD RESET</button>
-        <button id="followBtn" style="background:var(--grid); color:#FFF; border:none; padding:4px 8px; font-size:10px; font-weight:900; cursor:pointer;">FOLLOWING</button>
-    </div>
+<div style="display:flex;gap:12px;align-items:center">
+<h1 style="font-size:13px;letter-spacing:1px">MCM(30) EURUSD CORE</h1>
+<span id="status" class="status">OFFLINE</span>
 </div>
-
+<div style="display:flex;gap:8px">
+<button id="followBtn" class="active">FOLLOW</button>
+<button onclick="location.reload()">REFRESH</button>
+</div>
+</div>
 <canvas id="matrixCanvas"></canvas>
-
-<div id="panelsContainer">
-    <div id="streakPanel" class="panel"></div>
-    <div id="indexPanel" class="panel"></div>
-    <div id="reversalPanel" class="panel"></div>
-</div>
-
+<div id="streakPanel"></div>
+<div id="indexPanel"></div>
+<div id="reversalPanel"></div>
 <div id="modalOverlay" onclick="closeModal()"></div>
 <div id="modal">
-    <div id="modalTitle"></div>
-    <div id="modalSingleContent"></div>
-    <div id="modalDualContent">
-        <div class="modal-col-box"><div class="modal-col-header" style="color:var(--red)">RED</div><div id="rD"></div></div>
-        <div class="modal-col-box"><div class="modal-col-header" style="color:var(--green)">GRN</div><div id="gD"></div></div>
-    </div>
+<div id="modalTitle" style="font-weight:700;border-bottom:2px solid var(--grid);padding-bottom:10px;margin-bottom:10px;text-align:center;font-size:12px;color:var(--text)"></div>
+<div id="modalSingleContent" style="display:none"></div>
+<div class="modal-content" id="modalDualContent">
+<div class="modal-column">
+<div class="modal-column-header" style="color:var(--red)">RED</div>
+<div class="modal-column-content" id="rD"></div>
+</div>
+<div class="modal-column">
+<div class="modal-column-header" style="color:var(--green)">GREEN</div>
+<div class="modal-column-content" id="gD"></div>
+</div>
+</div>
 </div>
 
 <script type="module">
@@ -107,241 +76,264 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyDrvNy94Jhq8RmYM7jgfckrxneCetVkYw4",
-    authDomain: "mcm30-db-fe9da.firebaseapp.com",
-    databaseURL: "https://mcm30-db-fe9da-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "mcm30-db-fe9da",
-    storageBucket: "mcm30-db-fe9da.firebasestorage.app",
-    messagingSenderId: "34034835036",
-    appId: "1:34034835036:web:3e5dcd7e6b5c2c21e15099"
+  apiKey: "AIzaSyDrvNy94Jhq8RmYM7jgfckrxneCetVkYw4",
+  authDomain: "mcm30-db-fe9da.firebaseapp.com",
+  databaseURL: "https://mcm30-db-fe9da-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "mcm30-db-fe9da",
+  storageBucket: "mcm30-db-fe9da.firebasestorage.app",
+  messagingSenderId: "34034835036",
+  appId: "1:34034835036:web:3e5dcd7e6b5c2c21e15099"
 };
 
 const app = initializeApp(firebaseConfig);
-const db_cloud = getDatabase(app);
+const db = getDatabase(app);
 
-const canvas = document.getElementById('matrixCanvas');
-const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
-const statusEl = document.getElementById('status');
+const canvas=document.getElementById('matrixCanvas');
+const ctx=canvas.getContext('2d',{alpha:false,desynchronized:true});
+const statusEl=document.getElementById('status');
+const DERIV_WS="wss://ws.derivws.com/websockets/v3?app_id=1089";
+const TOKEN="TpVIBWpqet5X8AH";
+const SYMBOL="frxEURUSD"; // UPDATED TO EURUSD
+let ws=null,subscriptionId=null,lastPrice=null,currentColumn=0,ticksInCurrentMinute=0;
+let matrixData={};
+let cameraX=0,isFollowing=true,isDragging=false,lastMouseX=0;
+let pulsingRows=new Set();
+const CELL_W=32;
+let CELL_H=12;
+const MARGIN_LEFT=35;
+const MARGIN_RIGHT=145;
+const MARGIN_BOTTOM=22;
+const MAX_COLS=14400;
+const TOTAL_ROWS=30;
+const MCM_LOOKBACK=30;
+const pad=(n,size=2)=>String(n).padStart(size,'0');
 
-// CORE LOGIC CONSTANTS FROM 30.HTML
-let currentColumn = 0, ticksInCurrentMinute = 0, matrixData = {}, tickHistory = [];
-let cameraX = 0, isFollowing = true, isDragging = false, lastMouseX = 0;
-let pulsingRows = new Set();
+let tickHistory=[];
 
-const TOTAL_ROWS = 30, MCM_LOOKBACK = 30, MAX_COLS = 14400, CELL_W = 32;
-let CELL_H = 12;
-const MARGIN_LEFT = 35, MARGIN_RIGHT = 220;
-
-const noPad = (n) => String(n).padStart(2, '0');
-
-// PULSING / ANOMALY LOGIC
-function detectAnomalies() {
-    pulsingRows.clear();
-    let patterns = [];
-    for (let r = 0; r < TOTAL_ROWS; r++) {
-        let rS = {}, gS = {};
-        Object.values(matrixData).forEach(col => {
-            const d = col[r];
-            if(d) { (d.c==='R'?rS:gS)[d.s] = ((d.c==='R'?rS:gS)[d.s] || 0) + 1; }
-        });
-        ['R','G'].forEach((c, idx) => {
-            const map = idx === 0 ? rS : gS;
-            Object.keys(map).forEach(s => {
-                let str = parseInt(s), freq = map[s];
-                patterns.push({ row: r, streak: str, score: str * (100/freq), color: c });
-            });
-        });
-    }
-    patterns.sort((a,b)=>b.score-a.score).slice(0,8).forEach(p => {
-        const live = matrixData[currentColumn]?.[p.row];
-        if(live && ((live.c !== p.color && live.s >= p.streak-2) || (live.c === p.color && live.s >= p.streak-1))) {
-            pulsingRows.add(p.row);
-        }
-    });
-}
-
-function handleTick(tick) {
-    const price = tick.quote;
-    tickHistory.push({ price });
-    if (!matrixData[currentColumn]) matrixData[currentColumn] = {};
-    const row = Math.min(ticksInCurrentMinute, TOTAL_ROWS - 1);
-    
-    let color = 'G';
-    if (tickHistory.length > MCM_LOOKBACK) {
-        const oldP = tickHistory[tickHistory.length - (MCM_LOOKBACK + 1)].price;
-        color = price > oldP ? 'G' : (price < oldP ? 'R' : 'G');
-    }
-
-    const prev = (currentColumn > 0) ? matrixData[currentColumn - 1]?.[row] : null;
-    matrixData[currentColumn][row] = { c: color, s: (prev && prev.c === color) ? prev.s + 1 : 1 };
-
-    ticksInCurrentMinute++;
-    if (ticksInCurrentMinute >= TOTAL_ROWS) {
-        currentColumn++;
-        ticksInCurrentMinute = 0;
-    }
-}
-
-async function loadCloudData() {
-    statusEl.innerText = "DB SYNC...";
-    const snapshot = await get(ref(db_cloud, 'tick_history'));
-    if (snapshot.exists() && snapshot.val().prices) {
-        matrixData = {}; currentColumn = 0; ticksInCurrentMinute = 0; tickHistory = [];
-        snapshot.val().prices.forEach(p => handleTick({ quote: p }));
-        statusEl.innerText = "LIVE";
-        refreshUI();
-    }
-}
-
-function refreshUI() {
-    detectAnomalies();
-    updateStreakPanel();
-    updateReversalPanel();
-    if (isFollowing) jumpToCurrent();
-}
-
-function draw() {
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    const beforeLiveCol = currentColumn > 0 ? currentColumn - 1 : -1;
-    ctx.save();
-    ctx.translate(MARGIN_LEFT - cameraX, 0);
-
-    const startVis = Math.max(0, Math.floor(cameraX / CELL_W));
-    const endVis = Math.min(currentColumn, Math.floor((cameraX + window.innerWidth) / CELL_W) + 1);
-
-    for (let a = startVis; a <= endVis; a++) {
-        if (!matrixData[a]) continue;
-        for (let r in matrixData[a]) {
-            const d = matrixData[a][r];
-            const tx = a * CELL_W + CELL_W/2, ty = r * CELL_H + CELL_H/2;
-            ctx.save();
-            if(a === beforeLiveCol && d.s > 1) {
-                const beat = 1 + (0.15 * Math.abs(Math.sin(Date.now()/150)));
-                ctx.translate(tx, ty); ctx.scale(beat, beat); ctx.translate(-tx, -ty);
+async function loadFirebaseData() {
+    statusEl.innerText = "LOADING DB...";
+    try {
+        const snapshot = await get(ref(db, 'tick_history'));
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            if (data.prices && data.times) {
+                matrixData = {};
+                currentColumn = 0;
+                ticksInCurrentMinute = 0;
+                tickHistory = [];
+                for(let i = 0; i < data.prices.length; i++) {
+                    handleTick({ quote: data.prices[i], epoch: data.times[i] });
+                }
+                statusEl.innerText = "DB SYNCED";
+                updateStreakPanel();
+                updateReversalPanel();
+                if(isFollowing) jumpToCurrent();
             }
-            ctx.fillStyle = d.c === 'G' ? '#0F0' : '#F00';
-            ctx.font = 'bold 10px Consolas'; ctx.textAlign = 'center';
-            ctx.fillText('x' + d.s, tx, ty + 4);
-            ctx.restore();
         }
+    } catch (e) {
+        statusEl.innerText = "DB ERROR";
     }
-    ctx.restore();
-
-    for (let i = 0; i < TOTAL_ROWS; i++) {
-        const isP = pulsingRows.has(i);
-        ctx.fillStyle = isP ? '#3b82f6' : '#444';
-        ctx.font = '900 10px Consolas';
-        ctx.fillText(noPad(i), 5, i * CELL_H + CELL_H/2 + 4);
-    }
-    requestAnimationFrame(draw);
 }
 
-function updateStreakPanel() {
-    let sH = '', iH = '';
-    for (let r = 0; r < TOTAL_ROWS; r++) {
-        let rM = 0, gM = 0;
-        Object.values(matrixData).forEach(m => {
-            if (m[r]) { if (m[r].c === 'R') rM = Math.max(rM, m[r].s); else gM = Math.max(gM, m[r].s); }
-        });
-        sH += `<div class="streak-row" style="height:${CELL_H}px" onclick="window.openStreakModal(${r})"><div class="streak-col red-side">${rM || '--'}</div><div class="streak-col green-side">${gM || '--'}</div></div>`;
-        iH += `<div class="index-cell ${pulsingRows.has(r) ? 'pulsing' : ''}" style="height:${CELL_H}px">${noPad(r)}</div>`;
-    }
-    document.getElementById('streakPanel').innerHTML = sH;
-    document.getElementById('indexPanel').innerHTML = iH;
+function connectDerivWS(){
+ws=new WebSocket(DERIV_WS);
+ws.onopen=()=>{
+ws.send(JSON.stringify({authorize:TOKEN}));
+};
+ws.onmessage=(msg)=>{
+const data=JSON.parse(msg.data);
+if(data.authorize){
+statusEl.innerText="LIVE";
+ws.send(JSON.stringify({ticks:SYMBOL,subscribe:1}));
+}
+if(data.tick) handleTick(data.tick);
+};
+ws.onclose=()=>setTimeout(connectDerivWS,3000);
 }
 
-function updateReversalPanel() {
-    let rM = {}, gM = {};
-    for (let r = 0; r < TOTAL_ROWS; r++) {
-        let rS = {}, gS = {};
-        Object.keys(matrixData).forEach(c => {
-            const d = matrixData[c][r];
-            if (d) { (d.c === 'R' ? rS : gS)[d.s] = ((d.c === 'R' ? rS : gS)[d.s] || []).concat(c); }
-        });
-        [{ m: rM, s: rS }, { m: gM, s: gS }].forEach(cfg => {
-            const nums = Object.keys(cfg.s).map(Number).sort((a, b) => b - a);
-            if (nums.length > 0) {
-                const b = nums[0], f = cfg.s[b].length, k = `X${noPad(b)}-${noPad(f)}T`;
-                if (!cfg.m[k]) cfg.m[k] = { b, f, rows: [], score: b * (100 / f) };
-                cfg.m[k].rows.push({ row: r });
-            }
-        });
-    }
-    const rE = Object.keys(rM).map(k => ({ k, d: rM[k] })).sort((a, b) => b.d.score - a.d.score);
-    const gE = Object.keys(gM).map(k => ({ k, d: gM[k] })).sort((a, b) => b.d.score - a.d.score);
-    let h = '';
-    for (let i = 0; i < Math.max(rE.length, gE.length); i++) {
-        h += `<div class="reversal-row" style="height:${CELL_H}px">`;
-        [{ e: rE[i], c: 'red' }, { e: gE[i], c: 'green' }].forEach(sd => {
-            if (sd.e) h += `<div class="reversal-col ${sd.c}-side" onclick='window.openReversalModal("${sd.e.k}",${JSON.stringify(sd.e.d.rows)},"${sd.c}")'>${sd.e.k}</div>`;
-            else h += `<div class="reversal-col ${sd.c}-side">--</div>`;
-        });
-        h += `</div>`;
-    }
-    document.getElementById('reversalPanel').innerHTML = h;
+function handleTick(tick){
+const price=tick.quote;
+const timestamp=tick.epoch*1000;
+tickHistory.push({price,timestamp});
+if(!matrixData[currentColumn]) matrixData[currentColumn]={};
+const row=Math.min(ticksInCurrentMinute,TOTAL_ROWS-1);
+let color=null;
+if(tickHistory.length>=MCM_LOOKBACK+1){
+const priceNTicksAgo=tickHistory[tickHistory.length-(MCM_LOOKBACK+1)].price;
+if(price>priceNTicksAgo) color='G';
+else if(price<priceNTicksAgo) color='R';
+else {
+for(let i=tickHistory.length-2;i>=Math.max(0,tickHistory.length-(MCM_LOOKBACK+1));i--){
+if(i>=MCM_LOOKBACK){
+const oldPrice=tickHistory[i-MCM_LOOKBACK].price;
+const currentPrice=tickHistory[i].price;
+if(currentPrice>oldPrice){color='G';break;}
+else if(currentPrice<oldPrice){color='R';break;}
+}}}
+if(!color)color='G';
+}else{
+if(tickHistory.length>=2){
+const prevPrice=tickHistory[tickHistory.length-2].price;
+color=price>prevPrice?'G':(price<prevPrice?'R':'G');
+}else color='G';
+}
+if(currentColumn>0&&matrixData[currentColumn-1]&&matrixData[currentColumn-1][row]){
+const prevBox=matrixData[currentColumn-1][row];
+matrixData[currentColumn][row]={c:color,s:prevBox.c===color?prevBox.s+1:1};
+}else matrixData[currentColumn][row]={c:color,s:1};
+ticksInCurrentMinute++;
+if(ticksInCurrentMinute>=TOTAL_ROWS){
+currentColumn++;
+if(currentColumn>=MAX_COLS) currentColumn=0;
+ticksInCurrentMinute=0;
+}
+updateStreakPanel();
+updateReversalPanel();
+if(isFollowing)jumpToCurrent();
 }
 
-// MODAL LOGIC PRESERVED FROM 30.HTML
-window.openStreakModal = (r) => {
-    document.getElementById('modalTitle').innerText = `ROW ${noPad(r)} INFO`;
-    document.getElementById('modalDualContent').style.display = 'flex';
-    document.getElementById('modalSingleContent').style.display = 'none';
-    let rS = [], gS = [];
-    Object.values(matrixData).forEach(m => { if(m[r]) (m[r].c==='R'?rS:gS).push(m[r].s); });
-    const fmt = (arr, col) => {
-        let c = {}; arr.forEach(x => c[x] = (c[x]||0)+1);
-        return Object.keys(c).sort((a,b)=>b-a).map(k => `<div style="font-size:10px; padding:4px; text-align:center; border-bottom:1px solid var(--grid); color:${col}">X${noPad(k)} (${c[k]})</div>`).join('');
-    };
-    document.getElementById('rD').innerHTML = fmt(rS, 'var(--red)');
-    document.getElementById('gD').innerHTML = fmt(gS, 'var(--green)');
-    document.getElementById('modal').classList.add('show'); document.getElementById('modalOverlay').classList.add('show');
+function resize(){
+const dpr=window.devicePixelRatio||1;
+canvas.width=window.innerWidth*dpr;
+canvas.height=(window.innerHeight-42)*dpr;
+canvas.style.width=window.innerWidth+'px';
+canvas.style.height=(window.innerHeight-42)+'px';
+ctx.scale(dpr,dpr);
+CELL_H=(window.innerHeight-42-MARGIN_BOTTOM)/TOTAL_ROWS;
+if(isFollowing)jumpToCurrent();
+}
+
+function jumpToCurrent(){
+const cols=Object.keys(matrixData).map(Number);
+if(cols.length===0)return;
+const lastCol=Math.max(...cols);
+cameraX=Math.max(0,(lastCol*CELL_W)-(window.innerWidth-MARGIN_RIGHT-MARGIN_LEFT-CELL_W));
+}
+
+function updateStreakPanel(){
+const panel=document.getElementById('streakPanel');
+const indexPanel=document.getElementById('indexPanel');
+let html='', indexHtml='';
+for(let s=0;s<TOTAL_ROWS;s++){
+let rM=0,gM=0;
+Object.values(matrixData).forEach(m=>{
+if(m[s]){if(m[s].c==='R')rM=Math.max(rM,m[s].s); else gM=Math.max(gM,m[s].s);}
+});
+html+=`<div class="streak-row" onclick="window.openModal(${s})" style="position:absolute;top:${s*CELL_H}px;height:${CELL_H}px">
+<div class="streak-col red-side">${rM?'x'+pad(rM,2):'--'}</div>
+<div class="streak-col green-side">${gM?'x'+pad(gM,2):'--'}</div></div>`;
+indexHtml+=`<div class="index-cell" style="top:${s*CELL_H}px;height:${CELL_H}px">${pad(s,2)}</div>`;
+}
+panel.innerHTML=html;
+indexPanel.innerHTML=indexHtml;
+}
+
+function updateReversalPanel(){
+const panel=document.getElementById('reversalPanel');
+let redMap={}, greenMap={};
+for(let row=0;row<TOTAL_ROWS;row++){
+let rS={}, gS={};
+Object.keys(matrixData).forEach(colKey=>{
+const d=matrixData[colKey][row];
+if(d){if(d.c==='R'){if(!rS[d.s])rS[d.s]=[]; rS[d.s].push(colKey);} else {if(!gS[d.s])gS[d.s]=[]; gS[d.s].push(colKey);}}
+});
+[ {m:redMap, s:rS}, {m:greenMap, s:gS} ].forEach(cfg=>{
+const nums=Object.keys(cfg.s).map(Number).sort((a,b)=>b-a);
+if(nums.length>0){
+const b=nums[0], p=cfg.s[b], f=p.length, k=`X${pad(b,2)}-${pad(f,2)}T`;
+if(!cfg.m[k]) cfg.m[k]={streak:b,freq:f,rows:[],score:b*(100/f)};
+cfg.m[k].rows.push({row:row,lastCol:Math.max(...p)});
+}});
+}
+const rE=Object.keys(redMap).map(k=>({k,d:redMap[k]})).sort((a,b)=>b.d.score-a.d.score);
+const gE=Object.keys(greenMap).map(k=>({k,d:greenMap[k]})).sort((a,b)=>b.d.score-a.d.score);
+let html='';
+for(let i=0;i<Math.max(rE.length,gE.length,1);i++){
+html+=`<div class="reversal-row" style="position:absolute;top:${i*CELL_H}px;height:${CELL_H}px">`;
+[ {e:rE[i], c:'red'}, {e:gE[i], c:'green'} ].forEach(side=>{
+if(side.e){
+const d=JSON.stringify(side.e.d.rows).replace(/"/g,'&quot;');
+html+=`<div class="reversal-col ${side.c}-side" onclick="window.openReversalModal('${side.e.k}',${d},'${side.c}')">${side.e.k}</div>`;
+}else html+=`<div class="reversal-col ${side.c}-side">--</div>`;
+});
+html+='</div>';
+}
+panel.innerHTML=html;
+}
+
+function draw(){
+ctx.fillStyle='#ffffff';
+ctx.fillRect(0,0,window.innerWidth,window.innerHeight-42);
+const now=new Date();
+const monday=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()-(now.getUTCDay()===0?6:now.getUTCDay()-1),0,0,0));
+ctx.save();
+ctx.translate(MARGIN_LEFT-cameraX,0);
+for(let a=Math.max(0,Math.floor(cameraX/CELL_W));a<=Math.min(MAX_COLS-1,Math.floor((cameraX+window.innerWidth)/CELL_W)+1);a++){
+let x=a*CELL_W;
+if(matrixData[a]){
+for(let s in matrixData[a]){
+const d=matrixData[a][s];
+ctx.fillStyle=d.c==='G'?'#10b981':'#ef4444';
+ctx.font='700 9px ui-monospace,monospace';
+ctx.textAlign='center';
+ctx.textBaseline='middle';
+ctx.fillText('x'+d.s,x+CELL_W/2,s*CELL_H+CELL_H/2);
+}}
+ctx.fillStyle='#1f2937';
+ctx.font='700 7px ui-monospace,monospace';
+ctx.textAlign='center';
+ctx.fillText(pad(a,5),x+CELL_W/2,TOTAL_ROWS*CELL_H+2);
+const localDate=new Date(monday.getTime()+(a*30000));
+ctx.font='500 6px ui-monospace,monospace';
+ctx.fillStyle='#6b7280';
+ctx.fillText(`${pad(localDate.getHours())}:${pad(localDate.getMinutes())}`,x+CELL_W/2,TOTAL_ROWS*CELL_H+11);
+}
+ctx.restore();
+ctx.save();
+for(let row=0;row<TOTAL_ROWS;row++){
+ctx.fillStyle='#1f2937';
+ctx.font='700 8px ui-monospace,monospace';
+ctx.textAlign='center';
+ctx.fillText(pad(row,2),MARGIN_LEFT/2,row*CELL_H+CELL_H/2);
+}
+ctx.restore();
+requestAnimationFrame(draw);
+}
+
+canvas.addEventListener('mousedown',e=>{isDragging=true;lastMouseX=e.clientX;isFollowing=false;document.getElementById('followBtn').classList.remove('active');});
+window.addEventListener('mousemove',e=>{if(isDragging){cameraX-=(e.clientX-lastMouseX);cameraX=Math.max(0,cameraX);lastMouseX=e.clientX;}});
+window.addEventListener('mouseup',()=>isDragging=false);
+
+window.closeModal=()=>{document.getElementById('modal').classList.remove('show');document.getElementById('modalOverlay').classList.remove('show');}
+window.openModal=(sec)=>{
+document.getElementById('modalTitle').innerText=`${pad(sec,2)} ANOMALY HISTORY`;
+document.getElementById('modalDualContent').style.display='flex';
+document.getElementById('modalSingleContent').style.display='none';
+let rS=[],gS=[];
+Object.values(matrixData).forEach(m=>{if(m[sec]){(m[sec].c==='R'?rS:gS).push(m[sec].s);}});
+const getSum=(arr)=>{
+const c={}; arr.forEach(s=>c[s]=(c[s]||0)+1);
+return Object.keys(c).map(s=>({s:parseInt(s),c:c[s]})).sort((a,b)=>b.s-a.s);
 };
+document.getElementById('rD').innerHTML=getSum(rS).map(i=>`<div style="padding:5px;border-bottom:1px solid var(--grid);text-align:center;color:var(--red)">X${pad(i.s,2)} (${i.c})</div>`).join('');
+document.getElementById('gD').innerHTML=getSum(gS).map(i=>`<div style="padding:5px;border-bottom:1px solid var(--grid);text-align:center;color:var(--green)">X${pad(i.s,2)} (${i.c})</div>`).join('');
+document.getElementById('modal').classList.add('show');
+document.getElementById('modalOverlay').classList.add('show');
+}
 
-window.openReversalModal = (t, rows, c) => {
-    const col = c === 'red' ? 'var(--red)' : 'var(--green)';
-    document.getElementById('modalTitle').innerText = `${c.toUpperCase()} ${t}`;
-    document.getElementById('modalTitle').style.color = col;
-    document.getElementById('modalDualContent').style.display = 'none';
-    document.getElementById('modalSingleContent').style.display = 'flex';
-    document.getElementById('modalSingleContent').style.border = `1px solid ${col}`;
-    document.getElementById('modalSingleContent').innerHTML = rows.map(r => `<div style="color:${col}; border:1px solid ${col}; padding:2px; font-size:10px;">${noPad(r.row)}</div>`).join('');
-    document.getElementById('modal').classList.add('show'); document.getElementById('modalOverlay').classList.add('show');
-};
+window.openReversalModal=(k,r,c)=>{
+document.getElementById('modalTitle').innerText=`${c.toUpperCase()} ${k}`;
+document.getElementById('modalTitle').style.color=c==='red'?'var(--red)':'var(--green)';
+document.getElementById('modalDualContent').style.display='none';
+document.getElementById('modalSingleContent').style.display='flex';
+document.getElementById('modalSingleContent').innerHTML=r.map(row=>`<div style="color:var(--text)">${pad(row.row,2)}</div>`).join('');
+document.getElementById('modal').classList.add('show');
+document.getElementById('modalOverlay').classList.add('show');
+}
 
-window.closeModal = () => { document.getElementById('modal').classList.remove('show'); document.getElementById('modalOverlay').classList.remove('show'); };
-
-// HARD RESET VIA RENDER
-document.getElementById('resetBtn').onclick = async function() {
-    if (confirm("HARD RESET: Wipe Cloud and start from NOW?")) {
-        this.innerText = "WIPING...";
-        try {
-            const RENDER_URL = "https://mcm-server-qv29.onrender.com/reset-cloud";
-            const res = await fetch(RENDER_URL);
-            if (res.ok) { alert("Success. Reloading..."); location.reload(); }
-        } catch (e) { alert("Error connecting to server."); this.innerText = "HARD RESET"; }
-    }
-};
-
-// INITIALIZE
-const ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
-ws.onopen = () => ws.send(JSON.stringify({ authorize: "TpVIBWpqet5X8AH" }));
-ws.onmessage = (msg) => {
-    const data = JSON.parse(msg.data);
-    if (data.tick) { handleTick(data.tick); refreshUI(); }
-    else if (data.authorize) ws.send(JSON.stringify({ ticks: "frxEURUSD", subscribe: 1 }));
-};
-
-const jumpToCurrent = () => cameraX = Math.max(0, (currentColumn * CELL_W) - (window.innerWidth - MARGIN_RIGHT - MARGIN_LEFT) + CELL_W);
-
-window.onresize = () => {
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = (window.innerWidth - 220) * dpr; canvas.height = (window.innerHeight - 40) * dpr;
-    ctx.scale(dpr, dpr); CELL_H = (window.innerHeight - 40) / TOTAL_ROWS;
-};
-
-(async () => { window.onresize(); await loadCloudData(); draw(); })();
+document.getElementById('followBtn').onclick=function(){isFollowing=!isFollowing;this.classList.toggle('active',isFollowing);if(isFollowing)jumpToCurrent();};
+window.onresize=resize;
+(async function init(){await loadFirebaseData();resize();connectDerivWS();draw();})();
 </script>
 </body>
 </html>
