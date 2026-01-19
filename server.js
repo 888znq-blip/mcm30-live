@@ -2,7 +2,7 @@ import express from 'express';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getDatabase } from 'firebase-admin/database';
 import WebSocket from 'ws';
-import cors from 'cors'; // Added CORS support for frontend buttons
+import cors from 'cors';
 
 const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
 initializeApp({
@@ -13,21 +13,21 @@ const db = getDatabase();
 const DERIV_WS = "wss://ws.derivws.com/websockets/v3?app_id=1089";
 
 const app = express();
-app.use(cors()); // Allow your Netlify/GitHub domain to call the reset
+app.use(cors()); // CRITICAL: Allows Frontend buttons to work
 const port = process.env.PORT || 3000;
 
 app.get('/reset-cloud', async (req, res) => {
     try {
         await db.ref('tick_history').remove(); 
-        await runCollection(true); // True = start from NOW
+        await runCollection(true); 
         res.status(200).send('Database wiped and restarted.');
     } catch (e) { res.status(500).send(e.message); }
 });
 
 app.get('/update', async (req, res) => {
     try {
-        await runCollection(false); // False = standard Monday start
-        res.status(200).send('Standard weekly update successful.');
+        await runCollection(false);
+        res.status(200).send('Updated from Monday.');
     } catch (e) { res.status(500).send(e.message); }
 });
 
