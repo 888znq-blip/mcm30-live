@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>DNA CORE - LIVE CLOUD</title>
+<style>
+:root{--red:#ef4444;--green:#10b981;--blue:#3b82f6;--bg:#f5f5f5;--ui-bg:#fff;--grid:#d1d5db;--border:#9ca3af;--text:#1f2937;--text-muted:#6b7280;--shadow:rgba(0,0,0,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body,html{background:var(--bg);width:100vw;height:100vh;overflow:hidden;font-family:ui-monospace,monospace;touch-action:none;color:var(--text)}
+#ui{position:fixed;top:0;left:0;width:100%;background:var(--ui-bg);padding:0 12px;z-index:1000;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--grid);height:42px;box-shadow:0 2px 8px var(--shadow)}
+.status{font-weight:600;border:1px solid var(--green);padding:2px 8px;font-size:10px;color:var(--green)}
+canvas{display:block;margin-top:42px;cursor:grab}
+#streakPanel,#indexPanel,#reversalPanel{position:fixed;top:42px;height:calc(100vh - 42px);background:var(--ui-bg);border-left:2px solid var(--grid);border-right:2px solid var(--grid);z-index:999;box-shadow:-2px 0 8px var(--shadow);overflow:hidden}
+#streakPanel{right:105px;width:40px}
+#indexPanel{right:75px;width:30px}
+#reversalPanel{right:0;width:75px}
+.streak-row,.reversal-row{display:flex;width:100%;border-bottom:1px solid var(--grid);cursor:pointer}
+.streak-col,.reversal-col{flex:1;display:flex;align-items:center;justify-content:center;font-size:5px;font-weight:700;line-height:1.05}
+.streak-col.red-side,.reversal-col.red-side{color:var(--red);border-right:1px solid var(--grid)}
+.streak-col.green-side,.reversal-col.green-side{color:var(--green)}
+.index-cell{position:absolute;width:100%;display:flex;align-items:center;justify-content:center;font-size:6px;font-weight:700;color:var(--text);border-bottom:1px solid var(--grid);line-height:1.05}
+.index-cell.pulsing{animation:pulseIndex 1s ease-in-out infinite;color:var(--blue);font-weight:900}
+@keyframes pulseIndex{0%,100%{transform:scale(1.1);opacity:1}50%{transform:scale(1.4);opacity:.6}}
+#modalOverlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:1999;backdrop-filter:blur(4px)}
+#modal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:90vw;max-width:400px;max-height:90vh;background:var(--ui-bg);border:2px solid var(--border);z-index:2000;padding:20px;flex-direction:column;border-radius:12px}
+#modal.show,#modalOverlay.show{display:flex}
+#modalSingleContent{display:none;flex-wrap:wrap;gap:8px;justify-content:center;padding:15px;background:var(--bg);border-radius:8px;max-height:60vh;overflow-y:auto}
+#modalSingleContent div{padding:8px;border:1px solid var(--grid);background:#fff;border-radius:4px;font-weight:700;font-size:11px;min-width:45px;text-align:center}
+</style>
+</head>
+<body>
+<div id="ui">
+<div style="display:flex;gap:12px;align-items:center"><h1 style="font-size:13px;letter-spacing:1px">DNA CORE</h1><span id="status" class="status">SYNCING...</span></div>
+<div style="display:flex;gap:8px"><button id="followBtn" style="background:var(--blue);color:#fff;border:none;padding:4px 12px;font-size:10px;font-weight:700;cursor:pointer;border-radius:3px">FOLLOWING</button></div>
+</div>
+<canvas id="matrixCanvas"></canvas>
+<div id="streakPanel"></div><div id="indexPanel"></div><div id="reversalPanel"></div>
+<div id="modalOverlay" onclick="closeModal()"></div>
+<div id="modal">
+    <div id="modalTitle" style="font-weight:700;border-bottom:2px solid var(--grid);padding-bottom:10px;margin-bottom:10px;text-align:center;font-size:12px"></div>
+    <div id="modalSingleContent"></div>
+    <div class="modal-content" id="modalDualContent" style="display:flex;gap:10px;flex:1;overflow:hidden">
+        <div style="flex:1;border:1px solid var(--grid);border-radius:4px;overflow:hidden"><div style="background:var(--bg);padding:5px;font-size:10px;text-align:center;color:var(--red);font-weight:700">RED</div><div id="rD" style="height:200px;overflow-y:auto"></div></div>
+        <div style="flex:1;border:1px solid var(--grid);border-radius:4px;overflow:hidden"><div style="background:var(--bg);padding:5px;font-size:10px;text-align:center;color:var(--green);font-weight:700">GREEN</div><div id="gD" style="height:200px;overflow-y:auto"></div></div>
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+    projectId: "mcm30-db-fe9da",
+    databaseURL: "https://mcm30-db-fe9da-default-rtdb.firebaseio.com"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const canvas=document.getElementById('matrixCanvas'), ctx=canvas.getContext('2d',{alpha:false});
+let matrixData={}, currentColumn=0, cameraX=0, isFollowing=true, pulsingRows=new Set();
+const CELL_W=68, TOTAL_ROWS=30, MAX_COLS=14400, MARGIN_RIGHT=145;
+let CELL_H=12;
+const pad=(n,s=2)=>String(n).padStart(s,'0');
+
+onValue(ref(db, 'matrixData'), (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+        matrixData = data;
+        const cols = Object.keys(matrixData).map(Number);
+        currentColumn = Math.max(...cols);
+        document.getElementById('status').innerText = "LIVE CLOUD";
+        document.getElementById('status').style.color = "var(--green)";
+        document.getElementById('status').style.borderColor = "var(--green)";
+        updatePanels(); 
+        if (isFollowing) jumpToCurrent();
+    }
+});
+
+function updatePanels(){
+    let hS='', hI='', hR='', rMap={}, gMap={}, allP=[];
+    pulsingRows.clear();
+    for(let r=0; r<TOTAL_ROWS; r++){
+        let rM=0, gM=0, rS={}, gS={};
+        Object.values(matrixData).forEach(m=>{ if(m[r]){ 
+            if(m[r].c==='R'){ rM=Math.max(rM,m[r].s); rS[m[r].s]=(rS[m[r].s]||0)+1; }
+            else { gM=Math.max(gM,m[r].s); gS[m[r].s]=(gS[m[r].s]||0)+1; }
+        }});
+        ['R','G'].forEach((c,i)=>{
+            const map=i===0?rS:gS;
+            Object.keys(map).forEach(s=>{ let freq=map[s], st=parseInt(s); allP.push({r,c,s:st,sc:st*(100/freq)}); });
+        });
+        hS+=`<div class="streak-row" onclick="openModal(${r})" style="position:absolute;top:${r*CELL_H}px;height:${CELL_H}px">
+            <div class="streak-col red-side">${rM?'x'+rM:'--'}</div><div class="streak-col green-side">${gM?'x'+gM:'--'}</div></div>`;
+        [rS,gS].forEach((m,i)=>{
+            const srt=Object.keys(m).map(Number).sort((a,b)=>b-a);
+            if(srt.length){
+                const b=srt[0], f=m[b];
+                const k=`X${b}-${f}`, sc=b*(100/f);
+                (i===0?rMap:gMap)[k]={sc,r};
+            }
+        });
+    }
+    allP.sort((a,b)=>b.sc-a.sc).slice(0,10).forEach(p=>{
+        const live=matrixData[currentColumn]?.[p.r];
+        if(live && live.c===p.c && Math.abs(live.s-p.s)<=1) pulsingRows.add(p.r);
+    });
+    for(let r=0; r<TOTAL_ROWS; r++) hI+=`<div class="index-cell ${pulsingRows.has(r)?'pulsing':''}" style="top:${r*CELL_H}px;height:${CELL_H}px">${r}</div>`;
+    const rE=Object.keys(rMap).sort((a,b)=>rMap[b].sc-rMap[a].sc), gE=Object.keys(gMap).sort((a,b)=>gMap[b].sc-gMap[a].sc);
+    for(let i=0; i<Math.max(rE.length, gE.length); i++){
+        const rK=rE[i]||'--', gK=gE[i]||'--', rAttr=rK!=='--'?`onclick="openReversalModal('${rK}',${rMap[rK].r},'red')"`:'', gAttr=gK!=='--'?`onclick="openReversalModal('${gK}',${gMap[gK].r},'green')"`:'';
+        hR+=`<div class="reversal-row" style="position:absolute;top:${i*CELL_H}px;height:${CELL_H}px"><div class="reversal-col red-side" ${rAttr}>${rK}</div><div class="reversal-col green-side" ${gAttr}>${gK}</div></div>`;
+    }
+    document.getElementById('streakPanel').innerHTML=hS; document.getElementById('indexPanel').innerHTML=hI; document.getElementById('reversalPanel').innerHTML=hR;
+}
+
+function jumpToCurrent(){ cameraX = Math.max(0, (currentColumn*CELL_W)-(window.innerWidth-MARGIN_RIGHT-CELL_W)); }
+function closeModal(){ document.getElementById('modal').classList.remove('show'); document.getElementById('modalOverlay').classList.remove('show'); }
+
+window.onresize=()=>{ 
+    const dpr=window.devicePixelRatio||1; canvas.width=window.innerWidth*dpr; canvas.height=(window.innerHeight-42)*dpr;
+    canvas.style.width=window.innerWidth+'px'; canvas.style.height=(window.innerHeight-42)+'px';
+    ctx.scale(dpr,dpr); CELL_H=(window.innerHeight-85)/TOTAL_ROWS;
+};
+
+function draw(){
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,window.innerWidth,window.innerHeight);
+    const now=new Date();
+    const day=now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    const startOfISTWeek = new Date(now.setDate(diff));
+    startOfISTWeek.setHours(0,0,0,0);
+
+    ctx.save(); ctx.translate(-cameraX,0);
+    let sC=Math.max(0,Math.floor(cameraX/CELL_W)), eC=Math.min(MAX_COLS-1,Math.floor((cameraX+window.innerWidth)/CELL_W)+1);
+    for(let a=sC; a<=eC; a++){
+        let x=a*CELL_W;
+        if(matrixData[a]) Object.keys(matrixData[a]).forEach(r=>{
+            const d=matrixData[a][r];
+            ctx.fillStyle=d.c==='G'?'#10b981':'#ef4444'; ctx.font='bold 9px monospace'; ctx.textAlign='center'; 
+            ctx.fillText('x'+d.s, x+CELL_W/2, r*CELL_H+CELL_H/2+4);
+        });
+        ctx.fillStyle='#1f2937'; ctx.font='bold 7px monospace'; ctx.textAlign='center'; 
+        ctx.fillText(pad(a,5), x+CELL_W/2, (TOTAL_ROWS*CELL_H)+12);
+        const lD=new Date(startOfISTWeek.getTime()+(a*30000));
+        ctx.fillStyle='#6b7280'; ctx.font='6px monospace'; 
+        ctx.fillText(`${pad(lD.getHours())}:${pad(lD.getMinutes())}:${pad(lD.getSeconds())}`, x+CELL_W/2, (TOTAL_ROWS*CELL_H)+22);
+    }
+    ctx.restore(); requestAnimationFrame(draw);
+}
+window.onresize(); draw();
+</script>
+</body>
+</html>
