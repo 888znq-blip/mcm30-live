@@ -3,7 +3,6 @@ const WebSocket = require('ws');
 const express = require('express');
 
 // 1. Initialize Firebase Admin using your key file
-// Ensure the filename below matches exactly what you uploaded to GitHub
 const serviceAccount = require("./mcm30-db-fe9da-firebase-adminsdk-fbsvc-e642cc6138.json");
 
 admin.initializeApp({
@@ -12,7 +11,7 @@ admin.initializeApp({
 });
 const db = admin.database();
 
-// 2. Render Health Check (Keeps the service from failing)
+// 2. Render Health Check (Prevents deployment timeout)
 const app = express();
 app.get('/', (req, res) => res.send('DNA CORE SERVER ACTIVE'));
 app.listen(process.env.PORT || 3000);
@@ -56,7 +55,7 @@ function connect() {
                 streak = color === old.c ? old.s + 1 : 1;
             }
 
-            // SAVE TO FIREBASE
+            // Save to Firebase
             db.ref(`matrixData/${col}/${row}`).set({
                 c: color,
                 p: price,
