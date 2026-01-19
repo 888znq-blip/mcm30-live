@@ -3,15 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>MCM(30) CORE [CLOUD SYNC]</title>
+<title>MCM(30) CORE DNA [CLOUD MASTER]</title>
 <style>
-/* ALL ORIGINAL CSS PRESERVED */
+/* EXACT STYLES FROM ORIGINAL 30.HTML */
 :root {
     --bg:    #000000; 
     --grid:  #222222; 
     --meta:  #888888;
     --red:   #FF0000; 
     --green: #00FF00; 
+    --blue:  #3b82f6;
     --header-h: 40px; 
     --panel-w-streak: 64px;   
     --panel-w-index: 36px;    
@@ -20,15 +21,11 @@
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 ::-webkit-scrollbar { display: none; }
-* { -ms-overflow-style: none; scrollbar-width: none; }
 body, html {
     background-color: var(--bg);
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-    font-family: Consolas, monospace;
-    touch-action: none;
-    color: var(--red);
+    width: 100vw; height: 100vh;
+    overflow: hidden; font-family: Consolas, monospace;
+    touch-action: none; color: var(--red);
 }
 #ui {
     position: fixed; top: 0; left: 0; width: 100%; height: var(--header-h);
@@ -38,7 +35,9 @@ body, html {
 }
 h1 { font-size: 14px; color: var(--green); letter-spacing: 2px; font-weight: 900; }
 #status { font-size: 11px; font-weight: 900; color: var(--red); border: 1px solid var(--grid); padding: 4px 8px; }
-canvas { display: block; margin-top: var(--header-h); width: 100%; height: calc(100vh - var(--header-h)); cursor: crosshair; }
+
+canvas { display: block; margin-top: var(--header-h); cursor: crosshair; }
+
 #panelsContainer {
     position: fixed; right: 0; top: var(--header-h); height: calc(100vh - var(--header-h));
     width: var(--total-right-margin); display: flex; background-color: var(--bg); border-left: 1px solid var(--grid); z-index: 999;
@@ -47,33 +46,41 @@ canvas { display: block; margin-top: var(--header-h); width: 100%; height: calc(
 #streakPanel { width: var(--panel-w-streak); border-left: none; }
 #indexPanel { width: var(--panel-w-index); }
 #reversalPanel { width: var(--panel-w-reversal); }
+
 .streak-row, .reversal-row { display: flex; width: 100%; border-bottom: 1px solid var(--grid); cursor: pointer; flex-shrink: 0; }
 .streak-col, .reversal-col { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; padding: 1px 0; line-height: 1; }
 .red-side { color: var(--red); border-right: 1px solid var(--grid); }
 .green-side { color: var(--green); }
-.index-cell { width: 100%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 900; color: var(--meta); border-bottom: 1px solid var(--grid); flex-shrink: 0; }
+
+.index-cell { width: 100%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 900; color: var(--meta); border-bottom: 1px solid var(--grid); flex-shrink: 0; transition: all 0.3s; }
+.index-cell.pulsing { background-color: var(--blue); color: #fff; animation: pulseAnom 0.8s infinite alternate; }
+@keyframes pulseAnom { from { opacity: 1; } to { opacity: 0.4; } }
+
+/* MODAL STYLES PRESERVED FROM ORIGINAL */
 #modalOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1999; }
-#modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 200px; max-height: 80vh; background: var(--bg); border: 1px solid var(--grid); z-index: 2000; padding: 15px; flex-direction: column; }
+#modal { 
+    display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); 
+    width: 220px; max-height: 80vh; background: var(--bg); border: 1px solid var(--grid); 
+    z-index: 2000; padding: 15px; flex-direction: column; 
+}
 #modal.show, #modalOverlay.show { display: flex; }
-#modalTitle { text-align: center; font-weight: 900; font-size: 12px; margin-bottom: 10px; border-bottom: 1px solid var(--grid); padding-bottom: 5px; }
-.modal-content { display: flex; gap: 5px; flex: 1; overflow: hidden; }
-.modal-column { flex: 1; display: flex; flex-direction: column; border: 1px solid var(--grid); overflow: hidden; }
-.modal-column-header { padding: 5px; text-align: center; font-weight: 900; font-size: 10px; border-bottom: 1px solid var(--grid); }
-.modal-column-content { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
-#modalSingleContent { display: none; flex-wrap: wrap; gap: 4px; justify-content: center; padding: 10px; max-height: 60vh; overflow-y: auto; }
-#modalSingleContent div { padding: 4px; font-size: 10px; font-weight: 900; text-align: center; width: 30px; }
+#modalTitle { text-align: center; font-weight: 900; margin-bottom: 10px; font-size: 12px; }
+#modalSingleContent { display: none; flex-wrap: wrap; gap: 4px; justify-content: center; padding: 5px; }
+#modalDualContent { display: flex; gap: 5px; }
+.modal-col-box { flex: 1; border: 1px solid var(--grid); }
+.modal-col-header { text-align: center; font-size: 10px; border-bottom: 1px solid var(--grid); padding: 4px; font-weight: 900; }
 </style>
 </head>
 <body>
 
 <div id="ui">
     <div style="display:flex; gap:15px; align-items:center;">
-        <h1>MCM(30) CORE</h1>
+        <h1>MCM(30) MASTER</h1>
         <div id="status">OFFLINE</div>
     </div>
     <div style="display:flex; gap:10px;">
-        <button id="followBtn" style="background:var(--grid); color:#FFF; border:none; padding:5px 10px; font-size:10px; font-weight:900; cursor:pointer;">FOLLOWING</button>
-        <button onclick="location.reload()" style="background:var(--bg); color:var(--meta); border:1px solid var(--grid); padding:5px 10px; font-size:10px; font-weight:900; cursor:pointer;">REFRESH</button>
+        <button id="resetBtn" style="background:#300; color:#F00; border:1px solid #F00; padding:4px 8px; font-size:10px; font-weight:900; cursor:pointer;">HARD RESET</button>
+        <button id="followBtn" style="background:var(--grid); color:#FFF; border:none; padding:4px 8px; font-size:10px; font-weight:900; cursor:pointer;">FOLLOWING</button>
     </div>
 </div>
 
@@ -89,47 +96,69 @@ canvas { display: block; margin-top: var(--header-h); width: 100%; height: calc(
 <div id="modal">
     <div id="modalTitle"></div>
     <div id="modalSingleContent"></div>
-    <div class="modal-content" id="modalDualContent">
-        <div class="modal-column"><div class="modal-column-header" style="color:var(--red)">RED</div><div class="modal-column-content" id="rD"></div></div>
-        <div class="modal-column"><div class="modal-column-header" style="color:var(--green)">GRN</div><div class="modal-column-content" id="gD"></div></div>
+    <div id="modalDualContent">
+        <div class="modal-col-box"><div class="modal-col-header" style="color:var(--red)">RED</div><div id="rD"></div></div>
+        <div class="modal-col-box"><div class="modal-col-header" style="color:var(--green)">GRN</div><div id="gD"></div></div>
     </div>
 </div>
 
 <script type="module">
-// --- ADDED CLOUD CONFIGS ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDrvNy94Jhq8RmYM7jgfckrxneCetVkYw4",
-  authDomain: "mcm30-db-fe9da.firebaseapp.com",
-  databaseURL: "https://mcm30-db-fe9da-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "mcm30-db-fe9da",
-  storageBucket: "mcm30-db-fe9da.firebasestorage.app",
-  messagingSenderId: "34034835036",
-  appId: "1:34034835036:web:3e5dcd7e6b5c2c21e15099"
+    apiKey: "AIzaSyDrvNy94Jhq8RmYM7jgfckrxneCetVkYw4",
+    authDomain: "mcm30-db-fe9da.firebaseapp.com",
+    databaseURL: "https://mcm30-db-fe9da-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "mcm30-db-fe9da",
+    storageBucket: "mcm30-db-fe9da.firebasestorage.app",
+    messagingSenderId: "34034835036",
+    appId: "1:34034835036:web:3e5dcd7e6b5c2c21e15099"
 };
 
 const app = initializeApp(firebaseConfig);
 const db_cloud = getDatabase(app);
 
-// --- ALL ORIGINAL LOGIC PRESERVED ---
 const canvas = document.getElementById('matrixCanvas');
 const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
 const statusEl = document.getElementById('status');
-const SYMBOL = "frxEURUSD";
-const TOKEN = "TpVIBWpqet5X8AH";
-const DERIV_WS = "wss://ws.derivws.com/websockets/v3?app_id=1089";
 
+// CORE LOGIC CONSTANTS FROM 30.HTML
 let currentColumn = 0, ticksInCurrentMinute = 0, matrixData = {}, tickHistory = [];
-let cameraX = 0, isFollowing = true, lastPrice = null, isDragging = false, lastMouseX = 0;
+let cameraX = 0, isFollowing = true, isDragging = false, lastMouseX = 0;
+let pulsingRows = new Set();
 
 const TOTAL_ROWS = 30, MCM_LOOKBACK = 30, MAX_COLS = 14400, CELL_W = 32;
 let CELL_H = 12;
-const MARGIN_LEFT = 35, MARGIN_RIGHT = 220, MARGIN_BOTTOM = 0;
+const MARGIN_LEFT = 35, MARGIN_RIGHT = 220;
 
-const pad = (n) => String(n).padStart(2, '0');
-const noPad = (n) => String(n);
+const noPad = (n) => String(n).padStart(2, '0');
+
+// PULSING / ANOMALY LOGIC
+function detectAnomalies() {
+    pulsingRows.clear();
+    let patterns = [];
+    for (let r = 0; r < TOTAL_ROWS; r++) {
+        let rS = {}, gS = {};
+        Object.values(matrixData).forEach(col => {
+            const d = col[r];
+            if(d) { (d.c==='R'?rS:gS)[d.s] = ((d.c==='R'?rS:gS)[d.s] || 0) + 1; }
+        });
+        ['R','G'].forEach((c, idx) => {
+            const map = idx === 0 ? rS : gS;
+            Object.keys(map).forEach(s => {
+                let str = parseInt(s), freq = map[s];
+                patterns.push({ row: r, streak: str, score: str * (100/freq), color: c });
+            });
+        });
+    }
+    patterns.sort((a,b)=>b.score-a.score).slice(0,8).forEach(p => {
+        const live = matrixData[currentColumn]?.[p.row];
+        if(live && ((live.c !== p.color && live.s >= p.streak-2) || (live.c === p.color && live.s >= p.streak-1))) {
+            pulsingRows.add(p.row);
+        }
+    });
+}
 
 function handleTick(tick) {
     const price = tick.quote;
@@ -140,125 +169,90 @@ function handleTick(tick) {
     let color = 'G';
     if (tickHistory.length > MCM_LOOKBACK) {
         const oldP = tickHistory[tickHistory.length - (MCM_LOOKBACK + 1)].price;
-        if (price > oldP) color = 'G';
-        else if (price < oldP) color = 'R';
-        else color = 'G';
+        color = price > oldP ? 'G' : (price < oldP ? 'R' : 'G');
     }
 
-    if (currentColumn > 0 && matrixData[currentColumn - 1] && matrixData[currentColumn - 1][row]) {
-        const prev = matrixData[currentColumn - 1][row];
-        matrixData[currentColumn][row] = { c: color, s: prev.c === color ? prev.s + 1 : 1 };
-    } else {
-        matrixData[currentColumn][row] = { c: color, s: 1 };
-    }
+    const prev = (currentColumn > 0) ? matrixData[currentColumn - 1]?.[row] : null;
+    matrixData[currentColumn][row] = { c: color, s: (prev && prev.c === color) ? prev.s + 1 : 1 };
 
     ticksInCurrentMinute++;
     if (ticksInCurrentMinute >= TOTAL_ROWS) {
         currentColumn++;
-        if (currentColumn >= MAX_COLS) currentColumn = 0;
         ticksInCurrentMinute = 0;
     }
 }
 
-// --- CLOUD SYNC LOADER ---
 async function loadCloudData() {
-    statusEl.innerText = "LOADING...";
-    try {
-        const snapshot = await get(ref(db_cloud, 'tick_history'));
-        if (snapshot.exists()) {
-            const data = snapshot.val();
-            if (data.prices) {
-                // Clear local and rebuild from Cloud
-                matrixData = {}; currentColumn = 0; ticksInCurrentMinute = 0; tickHistory = [];
-                data.prices.forEach(p => handleTick({ quote: p }));
-                statusEl.innerText = "LIVE";
-                updateStreakPanel(); updateReversalPanel();
-                if (isFollowing) jumpToCurrent();
-            }
-        }
-    } catch (e) { statusEl.innerText = "SYNC ERR"; }
+    statusEl.innerText = "DB SYNC...";
+    const snapshot = await get(ref(db_cloud, 'tick_history'));
+    if (snapshot.exists() && snapshot.val().prices) {
+        matrixData = {}; currentColumn = 0; ticksInCurrentMinute = 0; tickHistory = [];
+        snapshot.val().prices.forEach(p => handleTick({ quote: p }));
+        statusEl.innerText = "LIVE";
+        refreshUI();
+    }
 }
 
-function connectWS() {
-    const ws = new WebSocket(DERIV_WS);
-    ws.onopen = () => ws.send(JSON.stringify({ authorize: TOKEN }));
-    ws.onmessage = (msg) => {
-        const data = JSON.parse(msg.data);
-        if (data.authorize) { statusEl.innerText = "LIVE"; ws.send(JSON.stringify({ ticks: SYMBOL, subscribe: 1 })); }
-        if (data.tick) {
-            handleTick(data.tick);
-            updateStreakPanel();
-            updateReversalPanel();
-            if (isFollowing) jumpToCurrent();
-        }
-    };
-    ws.onclose = () => setTimeout(connectWS, 3000);
-}
-
-function resize() {
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = window.innerWidth * dpr;
-    canvas.height = (window.innerHeight - 40) * dpr;
-    ctx.scale(dpr, dpr);
-    CELL_H = (window.innerHeight - 40) / TOTAL_ROWS;
+function refreshUI() {
+    detectAnomalies();
+    updateStreakPanel();
+    updateReversalPanel();
     if (isFollowing) jumpToCurrent();
-}
-
-function jumpToCurrent() {
-    const totalW = currentColumn * CELL_W;
-    const viewW = window.innerWidth - MARGIN_RIGHT - MARGIN_LEFT;
-    cameraX = Math.max(0, totalW - viewW + CELL_W);
 }
 
 function draw() {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    const beforeLiveCol = currentColumn > 0 ? currentColumn - 1 : -1;
     ctx.save();
     ctx.translate(MARGIN_LEFT - cameraX, 0);
-    
-    const startVisible = Math.max(0, Math.floor(cameraX / CELL_W));
-    const endVisible = Math.min(currentColumn, Math.floor((cameraX + window.innerWidth) / CELL_W) + 1);
 
-    for (let a = startVisible; a <= endVisible; a++) {
+    const startVis = Math.max(0, Math.floor(cameraX / CELL_W));
+    const endVis = Math.min(currentColumn, Math.floor((cameraX + window.innerWidth) / CELL_W) + 1);
+
+    for (let a = startVis; a <= endVis; a++) {
         if (!matrixData[a]) continue;
-        let x = a * CELL_W;
         for (let r in matrixData[a]) {
             const d = matrixData[a][r];
-            ctx.fillStyle = d.c === 'G' ? '#00FF00' : '#FF0000';
-            ctx.font = 'bold 10px Consolas';
-            ctx.textAlign = 'center';
-            ctx.fillText('x' + d.s, x + CELL_W / 2, r * CELL_H + CELL_H / 2 + 4);
+            const tx = a * CELL_W + CELL_W/2, ty = r * CELL_H + CELL_H/2;
+            ctx.save();
+            if(a === beforeLiveCol && d.s > 1) {
+                const beat = 1 + (0.15 * Math.abs(Math.sin(Date.now()/150)));
+                ctx.translate(tx, ty); ctx.scale(beat, beat); ctx.translate(-tx, -ty);
+            }
+            ctx.fillStyle = d.c === 'G' ? '#0F0' : '#F00';
+            ctx.font = 'bold 10px Consolas'; ctx.textAlign = 'center';
+            ctx.fillText('x' + d.s, tx, ty + 4);
+            ctx.restore();
         }
     }
     ctx.restore();
 
-    // Side Index
     for (let i = 0; i < TOTAL_ROWS; i++) {
-        ctx.fillStyle = '#444';
+        const isP = pulsingRows.has(i);
+        ctx.fillStyle = isP ? '#3b82f6' : '#444';
         ctx.font = '900 10px Consolas';
-        ctx.fillText(pad(i), 5, i * CELL_H + CELL_H / 2 + 4);
+        ctx.fillText(noPad(i), 5, i * CELL_H + CELL_H/2 + 4);
     }
     requestAnimationFrame(draw);
 }
 
-// UI UPDATE LOGIC (ORIGINAL)
 function updateStreakPanel() {
-    const p = document.getElementById('streakPanel');
-    const idx = document.getElementById('indexPanel');
-    let h = '', iH = '';
-    for (let s = 0; s < TOTAL_ROWS; s++) {
+    let sH = '', iH = '';
+    for (let r = 0; r < TOTAL_ROWS; r++) {
         let rM = 0, gM = 0;
         Object.values(matrixData).forEach(m => {
-            if (m[s]) { if (m[s].c === 'R') rM = Math.max(rM, m[s].s); else gM = Math.max(gM, m[s].s); }
+            if (m[r]) { if (m[r].c === 'R') rM = Math.max(rM, m[r].s); else gM = Math.max(gM, m[r].s); }
         });
-        h += `<div class="streak-row" onclick="window.openModal(${s})" style="height:${CELL_H}px"><div class="streak-col red-side">${rM || '--'}</div><div class="streak-col green-side">${gM || '--'}</div></div>`;
-        iH += `<div class="index-cell" style="height:${CELL_H}px">${pad(s)}</div>`;
+        sH += `<div class="streak-row" style="height:${CELL_H}px" onclick="window.openStreakModal(${r})"><div class="streak-col red-side">${rM || '--'}</div><div class="streak-col green-side">${gM || '--'}</div></div>`;
+        iH += `<div class="index-cell ${pulsingRows.has(r) ? 'pulsing' : ''}" style="height:${CELL_H}px">${noPad(r)}</div>`;
     }
-    p.innerHTML = h; idx.innerHTML = iH;
+    document.getElementById('streakPanel').innerHTML = sH;
+    document.getElementById('indexPanel').innerHTML = iH;
 }
 
 function updateReversalPanel() {
-    const p = document.getElementById('reversalPanel');
     let rM = {}, gM = {};
     for (let r = 0; r < TOTAL_ROWS; r++) {
         let rS = {}, gS = {};
@@ -269,7 +263,7 @@ function updateReversalPanel() {
         [{ m: rM, s: rS }, { m: gM, s: gS }].forEach(cfg => {
             const nums = Object.keys(cfg.s).map(Number).sort((a, b) => b - a);
             if (nums.length > 0) {
-                const b = nums[0], f = cfg.s[b].length, k = `X${pad(b)}-${pad(f)}T`;
+                const b = nums[0], f = cfg.s[b].length, k = `X${noPad(b)}-${noPad(f)}T`;
                 if (!cfg.m[k]) cfg.m[k] = { b, f, rows: [], score: b * (100 / f) };
                 cfg.m[k].rows.push({ row: r });
             }
@@ -286,22 +280,22 @@ function updateReversalPanel() {
         });
         h += `</div>`;
     }
-    p.innerHTML = h;
+    document.getElementById('reversalPanel').innerHTML = h;
 }
 
-// MODALS AND INTERACTION (ORIGINAL)
-window.openModal = (s) => {
-    document.getElementById('modalTitle').innerText = `${pad(s)} ANOMALY`;
+// MODAL LOGIC PRESERVED FROM 30.HTML
+window.openStreakModal = (r) => {
+    document.getElementById('modalTitle').innerText = `ROW ${noPad(r)} INFO`;
     document.getElementById('modalDualContent').style.display = 'flex';
     document.getElementById('modalSingleContent').style.display = 'none';
     let rS = [], gS = [];
-    Object.values(matrixData).forEach(m => { if (m[s]) (m[s].c === 'R' ? rS : gS).push(m[s].s); });
-    const getSum = (arr) => {
-        const c = {}; arr.forEach(x => c[x] = (c[x] || 0) + 1);
-        return Object.keys(c).map(x => ({ s: parseInt(x), c: c[x] })).sort((a, b) => b.s - a.s);
+    Object.values(matrixData).forEach(m => { if(m[r]) (m[r].c==='R'?rS:gS).push(m[r].s); });
+    const fmt = (arr, col) => {
+        let c = {}; arr.forEach(x => c[x] = (c[x]||0)+1);
+        return Object.keys(c).sort((a,b)=>b-a).map(k => `<div style="font-size:10px; padding:4px; text-align:center; border-bottom:1px solid var(--grid); color:${col}">X${noPad(k)} (${c[k]})</div>`).join('');
     };
-    document.getElementById('rD').innerHTML = getSum(rS).map(i => `<div style="padding:5px;border-bottom:1px solid var(--grid);text-align:center;color:var(--red);font-size:10px;">X${pad(i.s)} (${i.c})</div>`).join('');
-    document.getElementById('gD').innerHTML = getSum(gS).map(i => `<div style="padding:5px;border-bottom:1px solid var(--grid);text-align:center;color:var(--green);font-size:10px;">X${pad(i.s)} (${i.c})</div>`).join('');
+    document.getElementById('rD').innerHTML = fmt(rS, 'var(--red)');
+    document.getElementById('gD').innerHTML = fmt(gS, 'var(--green)');
     document.getElementById('modal').classList.add('show'); document.getElementById('modalOverlay').classList.add('show');
 };
 
@@ -311,19 +305,43 @@ window.openReversalModal = (t, rows, c) => {
     document.getElementById('modalTitle').style.color = col;
     document.getElementById('modalDualContent').style.display = 'none';
     document.getElementById('modalSingleContent').style.display = 'flex';
-    document.getElementById('modalSingleContent').innerHTML = rows.map(r => `<div style="color:${col};border:1px solid var(--grid)">${noPad(r.row)}</div>`).join('');
+    document.getElementById('modalSingleContent').style.border = `1px solid ${col}`;
+    document.getElementById('modalSingleContent').innerHTML = rows.map(r => `<div style="color:${col}; border:1px solid ${col}; padding:2px; font-size:10px;">${noPad(r.row)}</div>`).join('');
     document.getElementById('modal').classList.add('show'); document.getElementById('modalOverlay').classList.add('show');
 };
 
 window.closeModal = () => { document.getElementById('modal').classList.remove('show'); document.getElementById('modalOverlay').classList.remove('show'); };
 
-canvas.addEventListener('mousedown', e => { isDragging = true; lastMouseX = e.clientX; isFollowing = false; document.getElementById('followBtn').innerText = 'FOLLOW'; });
-window.addEventListener('mousemove', e => { if (isDragging) { cameraX -= (e.clientX - lastMouseX); cameraX = Math.max(0, cameraX); lastMouseX = e.clientX; } });
-window.addEventListener('mouseup', () => isDragging = false);
-document.getElementById('followBtn').onclick = function() { isFollowing = !isFollowing; this.innerText = isFollowing ? 'FOLLOWING' : 'FOLLOW'; if (isFollowing) jumpToCurrent(); };
+// HARD RESET VIA RENDER
+document.getElementById('resetBtn').onclick = async function() {
+    if (confirm("HARD RESET: Wipe Cloud and start from NOW?")) {
+        this.innerText = "WIPING...";
+        try {
+            const RENDER_URL = "https://mcm-server-qv29.onrender.com/reset-cloud";
+            const res = await fetch(RENDER_URL);
+            if (res.ok) { alert("Success. Reloading..."); location.reload(); }
+        } catch (e) { alert("Error connecting to server."); this.innerText = "HARD RESET"; }
+    }
+};
 
-window.onresize = resize;
-(async function init() { resize(); await loadCloudData(); connectWS(); draw(); })();
+// INITIALIZE
+const ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
+ws.onopen = () => ws.send(JSON.stringify({ authorize: "TpVIBWpqet5X8AH" }));
+ws.onmessage = (msg) => {
+    const data = JSON.parse(msg.data);
+    if (data.tick) { handleTick(data.tick); refreshUI(); }
+    else if (data.authorize) ws.send(JSON.stringify({ ticks: "frxEURUSD", subscribe: 1 }));
+};
+
+const jumpToCurrent = () => cameraX = Math.max(0, (currentColumn * CELL_W) - (window.innerWidth - MARGIN_RIGHT - MARGIN_LEFT) + CELL_W);
+
+window.onresize = () => {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = (window.innerWidth - 220) * dpr; canvas.height = (window.innerHeight - 40) * dpr;
+    ctx.scale(dpr, dpr); CELL_H = (window.innerHeight - 40) / TOTAL_ROWS;
+};
+
+(async () => { window.onresize(); await loadCloudData(); draw(); })();
 </script>
 </body>
 </html>
