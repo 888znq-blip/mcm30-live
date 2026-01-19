@@ -3,7 +3,6 @@ import { initializeApp, cert } from 'firebase-admin/app';
 import { getDatabase } from 'firebase-admin/database';
 import WebSocket from 'ws';
 
-// 1. SETUP FIREBASE
 const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
 initializeApp({
   credential: cert(serviceAccount),
@@ -15,45 +14,50 @@ const DERIV_WS = "wss://ws.derivws.com/websockets/v3?app_id=1089";
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Existing Update Route
 app.get('/update', async (req, res) => {
     try {
-        await runDataCollection();
-        res.status(200).send('EURUSD Data updated successfully');
+        await runDataCollection(false); // Normal Monday start
+        res.status(200).send('Data updated from Monday');
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Error updating data');
+        res.status(500).send('Error');
     }
 });
 
-app.get('/', (req, res) => res.send('MCM EURUSD Bot is Active.'));
+// NEW: RESET ROUTE
+app.get('/reset-cloud', async (req, res) => {
+    console.log("HARD RESET INITIATED...");
+    try {
+        await db.ref('tick_history').remove(); // Wipe Firebase
+        await runDataCollection(true);         // Start fresh from NOW
+        res.status(200).send('Cloud Reset Successful');
+    } catch (error) {
+        res.status(500).send('Reset Failed');
+    }
+});
 
 app.listen(port, () => console.log(`Server running on port ${port}`));
 
-// 3. THE LOGIC (EURUSD & MONDAY START)
-function runDataCollection() {
+function runDataCollection(isFresh = false) {
     return new Promise((resolve, reject) => {
         const ws = new WebSocket(DERIV_WS);
-        
-        const safetyTimeout = setTimeout(() => {
-            ws.terminate();
-            reject(new Error("WebSocket timeout"));
-        }, 20000);
+        const timeout = setTimeout(() => { ws.terminate(); reject(); }, 20000);
 
-        // Calculate Monday 00:00:00 UTC of current week
-        const getMondayTimestamp = () => {
+        const getMonday = () => {
             const now = new Date();
             const day = now.getUTCDay();
             const diff = now.getUTCDate() - day + (day === 0 ? -6 : 1);
-            const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), diff, 0, 0, 0));
-            return Math.floor(monday.getTime() / 1000);
+            return Math.floor(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), diff, 0,0,0)).getTime() / 1000);
         };
 
         ws.on('open', () => {
-            console.log("Fetching EURUSD from Monday...");
+            // Logic: If isFresh is true, start from "now". Otherwise, start from Monday.
+            const startTime = isFresh ? Math.floor(Date.now() / 1000) : getMonday();
+            
             ws.send(JSON.stringify({
-                ticks_history: "frxEURUSD", // Updated to EUR/USD
+                ticks_history: "frxEURUSD",
                 adjust_start_time: 1,
-                start: getMondayTimestamp(), // Dynamic Monday Start
+                start: startTime,
                 end: "latest",
                 style: "ticks"
             }));
@@ -62,23 +66,15 @@ function runDataCollection() {
         ws.on('message', async (data) => {
             const msg = JSON.parse(data);
             if (msg.history) {
-                clearTimeout(safetyTimeout);
-                const historyRef = db.ref('tick_history');
-                await historyRef.set({
+                clearTimeout(timeout);
+                await db.ref('tick_history').set({
                     prices: msg.history.prices,
                     times: msg.history.times,
-                    symbol: "EURUSD",
                     lastUpdate: Date.now()
                 });
-                console.log("Database updated with EURUSD data.");
                 ws.close();
                 resolve();
             }
-        });
-        
-        ws.on('error', (e) => {
-            clearTimeout(safetyTimeout);
-            reject(e);
         });
     });
 }
